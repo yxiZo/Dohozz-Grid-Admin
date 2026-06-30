@@ -270,7 +270,7 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         </p>
       </div>
 
-      <div className='min-h-[480px] flex-1'>
+      <div className='min-h-0 flex-1'>
         <AgGridReact<Lead>
           theme={resolvedTheme === 'dark' ? darkTheme : baseTheme}
           rowData={rows}
