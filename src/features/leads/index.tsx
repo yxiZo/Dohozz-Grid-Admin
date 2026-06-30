@@ -6,7 +6,7 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { LeadsGrid } from './components/leads-grid'
+import { LeadsView } from './components/leads-view'
 import { leads } from './data/data'
 
 export function Leads() {
@@ -31,7 +31,7 @@ export function Leads() {
             <p className='text-muted-foreground'>{t('leads.subtitle')}</p>
           </div>
         </div>
-        <LeadsGrid initialData={leads} />
+        <LeadsView initialData={leads} />
       </Main>
     </>
   )

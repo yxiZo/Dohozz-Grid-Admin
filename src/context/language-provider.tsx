@@ -20,6 +20,10 @@ const translations = {
     'leads.deleteRow': '删除选中行',
     'leads.export': '导出 CSV',
     'leads.rowCount': '共 {count} 条记录',
+    'leads.viewTable': '表格视图',
+    'leads.viewKanban': '看板视图',
+    'leads.kanbanHint': '拖拽卡片可改变线索状态',
+    'leads.totalAmount': '金额合计',
     'language.label': '语言',
   },
   en: {
@@ -30,6 +34,10 @@ const translations = {
     'leads.deleteRow': 'Delete Selected',
     'leads.export': 'Export CSV',
     'leads.rowCount': '{count} records',
+    'leads.viewTable': 'Table',
+    'leads.viewKanban': 'Kanban',
+    'leads.kanbanHint': 'Drag a card to change its status',
+    'leads.totalAmount': 'Total Amount',
     'language.label': 'Language',
   },
 } as const
