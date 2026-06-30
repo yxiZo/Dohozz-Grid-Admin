@@ -3,27 +3,22 @@ import {
   LayoutDashboard,
   Monitor,
   Bug,
-  ListTodo,
   Table2,
   FileX,
   HelpCircle,
   Lock,
   Bell,
-  Package,
   Palette,
   ServerOff,
   Settings,
   Wrench,
   UserCog,
   UserX,
-  Users,
-  MessagesSquare,
   ShieldCheck,
   AudioWaveform,
   Command,
   GalleryVerticalEnd,
 } from 'lucide-react'
-import { ClerkLogo } from '@/assets/clerk-logo'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
@@ -59,48 +54,9 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
         },
         {
-          title: 'Tasks',
-          url: '/tasks',
-          icon: ListTodo,
-        },
-        {
           title: '客户/线索',
           url: '/leads',
           icon: Table2,
-        },
-        {
-          title: 'Apps',
-          url: '/apps',
-          icon: Package,
-        },
-        {
-          title: 'Chats',
-          url: '/chats',
-          badge: '3',
-          icon: MessagesSquare,
-        },
-        {
-          title: 'Users',
-          url: '/users',
-          icon: Users,
-        },
-        {
-          title: 'Secured by Clerk',
-          icon: ClerkLogo,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/clerk/sign-in',
-            },
-            {
-              title: 'Sign Up',
-              url: '/clerk/sign-up',
-            },
-            {
-              title: 'User Management',
-              url: '/clerk/user-management',
-            },
-          ],
         },
       ],
     },

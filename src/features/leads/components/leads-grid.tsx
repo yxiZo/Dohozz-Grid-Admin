@@ -16,6 +16,7 @@ import {
 import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise'
 import { AgGridReact } from 'ag-grid-react'
 import { Plus, Trash2, Download } from 'lucide-react'
+import { useLanguage } from '@/context/language-provider'
 import { useTheme } from '@/context/theme-provider'
 import { Button } from '@/components/ui/button'
 import {
@@ -64,6 +65,7 @@ type LeadsGridProps = {
 
 export function LeadsGrid({ initialData }: LeadsGridProps) {
   const { resolvedTheme } = useTheme()
+  const { t } = useLanguage()
   const gridApiRef = useRef<GridApi<Lead> | null>(null)
   const [rows, setRows] = useState<Lead[]>(initialData)
 
@@ -287,18 +289,18 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
       <div className='flex flex-wrap items-center gap-2'>
         <Button size='sm' onClick={addRow}>
           <Plus className='size-4' />
-          新增行
+          {t('leads.addRow')}
         </Button>
         <Button size='sm' variant='outline' onClick={deleteSelected}>
           <Trash2 className='size-4' />
-          删除选中行
+          {t('leads.deleteRow')}
         </Button>
         <Button size='sm' variant='outline' onClick={exportCsv}>
           <Download className='size-4' />
-          导出 CSV
+          {t('leads.export')}
         </Button>
         <p className='text-muted-foreground ms-auto text-sm'>
-          双击编辑 · 方向键/Tab 移动 · 拖拽框选 · Ctrl+C / Ctrl+V 复制粘贴（支持 Excel）
+          {t('leads.rowCount', { count: rows.length })}
         </p>
       </div>
 

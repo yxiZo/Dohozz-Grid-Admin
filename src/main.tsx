@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { handleServerError } from '@/lib/handle-server-error'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
+import { LanguageProvider } from './context/language-provider'
 import { ThemeProvider } from './context/theme-provider'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
@@ -96,9 +97,11 @@ if (!rootElement.innerHTML) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <FontProvider>
-            <DirectionProvider>
-              <RouterProvider router={router} />
-            </DirectionProvider>
+            <LanguageProvider>
+              <DirectionProvider>
+                <RouterProvider router={router} />
+              </DirectionProvider>
+            </LanguageProvider>
           </FontProvider>
         </ThemeProvider>
       </QueryClientProvider>
