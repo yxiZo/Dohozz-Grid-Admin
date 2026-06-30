@@ -4,6 +4,7 @@ import {
   Monitor,
   Bug,
   ListTodo,
+  Table2,
   FileX,
   HelpCircle,
   Lock,
@@ -61,6 +62,11 @@ export const sidebarData: SidebarData = {
           title: 'Tasks',
           url: '/tasks',
           icon: ListTodo,
+        },
+        {
+          title: '客户/线索',
+          url: '/leads',
+          icon: Table2,
         },
         {
           title: 'Apps',
