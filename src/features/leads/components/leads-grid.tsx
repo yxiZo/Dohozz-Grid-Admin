@@ -10,7 +10,6 @@ import {
   type GridReadyEvent,
   type CellValueChangedEvent,
   type ValueFormatterParams,
-  type ICellRendererParams,
   type MenuItemDef,
   type DefaultMenuItem,
 } from 'ag-grid-community'
@@ -22,10 +21,20 @@ import { Button } from '@/components/ui/button'
 import {
   type Lead,
   channelOptions,
+  companyOptions,
+  ownerOptions,
   platformOptions,
-  statusColorMap,
   statusOptions,
 } from '../data/data'
+import {
+  BadgeRenderer,
+  CompanyRenderer,
+  ComboboxCellEditor,
+  DateCellEditor,
+  DateRenderer,
+  PersonRenderer,
+  StatusRenderer,
+} from './cell-editors'
 
 // Register all Community + Enterprise modules once.
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
@@ -42,21 +51,6 @@ let idCounter = 0
 function newId() {
   idCounter += 1
   return `N-${Date.now().toString().slice(-6)}-${idCounter}`
-}
-
-function StatusRenderer(params: ICellRendererParams<Lead>) {
-  const value = params.value as string
-  if (!value) return null
-  const color = statusColorMap[value] ?? 'var(--muted-foreground)'
-  return (
-    <span className='inline-flex items-center gap-2'>
-      <span
-        className='inline-block size-2 rounded-full'
-        style={{ backgroundColor: color }}
-      />
-      {value}
-    </span>
-  )
 }
 
 const currencyFormatter = (params: ValueFormatterParams<Lead, number>) => {
@@ -88,30 +82,66 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         cellClass: 'text-muted-foreground',
       },
       { field: 'name', headerName: '客户名称', minWidth: 120 },
-      { field: 'company', headerName: '公司', minWidth: 150 },
+      {
+        field: 'company',
+        headerName: '公司',
+        minWidth: 170,
+        cellRenderer: CompanyRenderer,
+        cellEditor: ComboboxCellEditor,
+        cellEditorPopup: true,
+        cellEditorPopupPosition: 'under',
+        cellEditorParams: {
+          options: companyOptions,
+          variant: 'company',
+          allowCustom: true,
+          placeholder: '搜索或新增公司…',
+        },
+      },
       {
         field: 'platform',
         headerName: '平台',
         width: 120,
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: { values: [...platformOptions] },
+        cellRenderer: BadgeRenderer,
+        cellEditor: ComboboxCellEditor,
+        cellEditorPopup: true,
+        cellEditorPopupPosition: 'under',
+        cellEditorParams: { options: platformOptions, variant: 'badge' },
       },
       {
         field: 'channel',
         headerName: '联系渠道',
-        width: 120,
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: { values: [...channelOptions] },
+        width: 130,
+        cellRenderer: BadgeRenderer,
+        cellEditor: ComboboxCellEditor,
+        cellEditorPopup: true,
+        cellEditorPopupPosition: 'under',
+        cellEditorParams: { options: channelOptions, variant: 'badge' },
       },
       {
         field: 'status',
         headerName: '状态',
         width: 130,
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: { values: [...statusOptions] },
         cellRenderer: StatusRenderer,
+        cellEditor: ComboboxCellEditor,
+        cellEditorPopup: true,
+        cellEditorPopupPosition: 'under',
+        cellEditorParams: { options: statusOptions, variant: 'status' },
       },
-      { field: 'owner', headerName: '负责人', width: 120 },
+      {
+        field: 'owner',
+        headerName: '负责人',
+        width: 140,
+        cellRenderer: PersonRenderer,
+        cellEditor: ComboboxCellEditor,
+        cellEditorPopup: true,
+        cellEditorPopupPosition: 'under',
+        cellEditorParams: {
+          options: ownerOptions,
+          variant: 'person',
+          allowCustom: true,
+          placeholder: '搜索或新增负责人…',
+        },
+      },
       {
         field: 'amount',
         headerName: '预计金额',
@@ -126,8 +156,10 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         field: 'followUpDate',
         headerName: '跟进日期',
         width: 150,
-        cellDataType: 'dateString',
-        cellEditor: 'agDateStringCellEditor',
+        cellRenderer: DateRenderer,
+        cellEditor: DateCellEditor,
+        cellEditorPopup: true,
+        cellEditorPopupPosition: 'under',
       },
       { field: 'note', headerName: '备注', minWidth: 220, flex: 1 },
     ],

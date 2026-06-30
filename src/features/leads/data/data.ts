@@ -36,6 +36,25 @@ export const statusOptions = [
   '已流失',
 ] as const
 
+export const companyOptions = [
+  '宏远科技',
+  '蓝海传媒',
+  '星辰电子',
+  '云图网络',
+  '锐捷智能',
+  '天合实业',
+  '恒信贸易',
+  '极光软件',
+] as const
+
+export const ownerOptions = [
+  '销售一组',
+  '销售二组',
+  '王经理',
+  '李经理',
+  '张主管',
+] as const
+
 // Map status -> a tailwind/theme-friendly color token used for the status pill
 export const statusColorMap: Record<string, string> = {
   新线索: 'var(--chart-1)',
@@ -63,17 +82,8 @@ const names = [
   '徐强',
   '孙丽',
 ]
-const companies = [
-  '宏远科技',
-  '蓝海传媒',
-  '星辰电子',
-  '云图网络',
-  '锐捷智能',
-  '天合实业',
-  '恒信贸易',
-  '极光软件',
-]
-const owners = ['销售一组', '销售二组', '王经理', '李经理', '张主管']
+const companies = companyOptions
+const owners = ownerOptions
 
 export const leads: Lead[] = Array.from({ length: 24 }).map((_, i) => {
   const d = new Date()
