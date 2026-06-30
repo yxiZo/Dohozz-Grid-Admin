@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -60,14 +60,14 @@ const currencyFormatter = (params: ValueFormatterParams<Lead, number>) => {
 }
 
 type LeadsGridProps = {
-  initialData: Lead[]
+  rows: Lead[]
+  setRows: React.Dispatch<React.SetStateAction<Lead[]>>
 }
 
-export function LeadsGrid({ initialData }: LeadsGridProps) {
+export function LeadsGrid({ rows, setRows }: LeadsGridProps) {
   const { resolvedTheme } = useTheme()
   const { t } = useLanguage()
   const gridApiRef = useRef<GridApi<Lead> | null>(null)
-  const [rows, setRows] = useState<Lead[]>(initialData)
 
   const onGridReady = useCallback((e: GridReadyEvent<Lead>) => {
     gridApiRef.current = e.api
@@ -103,6 +103,7 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         field: 'platform',
         headerName: '平台',
         width: 120,
+        enableRowGroup: true,
         cellRenderer: BadgeRenderer,
         cellEditor: ComboboxCellEditor,
         cellEditorPopup: true,
@@ -113,6 +114,7 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         field: 'channel',
         headerName: '联系渠道',
         width: 130,
+        enableRowGroup: true,
         cellRenderer: BadgeRenderer,
         cellEditor: ComboboxCellEditor,
         cellEditorPopup: true,
@@ -123,6 +125,7 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         field: 'status',
         headerName: '状态',
         width: 130,
+        enableRowGroup: true,
         cellRenderer: StatusRenderer,
         cellEditor: ComboboxCellEditor,
         cellEditorPopup: true,
@@ -133,6 +136,7 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         field: 'owner',
         headerName: '负责人',
         width: 140,
+        enableRowGroup: true,
         cellRenderer: PersonRenderer,
         cellEditor: ComboboxCellEditor,
         cellEditorPopup: true,
@@ -153,6 +157,8 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
         cellEditorParams: { min: 0, precision: 0 },
         valueFormatter: currencyFormatter,
         type: 'rightAligned',
+        enableValue: true,
+        aggFunc: 'sum',
       },
       {
         field: 'followUpDate',
@@ -175,6 +181,33 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
       filter: true,
       resizable: true,
       minWidth: 100,
+    }),
+    []
+  )
+
+  // Enterprise: columns + filters tool panels in a collapsible sidebar.
+  const sideBar = useMemo(
+    () => ({
+      toolPanels: ['columns', 'filters'],
+      defaultToolPanel: '',
+    }),
+    []
+  )
+
+  // Enterprise: aggregation status bar at the bottom of the grid.
+  const statusBar = useMemo(
+    () => ({
+      statusPanels: [
+        { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
+        { statusPanel: 'agSelectedRowCountComponent', align: 'center' },
+        {
+          statusPanel: 'agAggregationComponent',
+          align: 'right',
+          statusPanelParams: {
+            aggFuncs: ['count', 'sum', 'avg', 'min', 'max'],
+          },
+        },
+      ],
     }),
     []
   )
@@ -315,6 +348,11 @@ export function LeadsGrid({ initialData }: LeadsGridProps) {
           onCellValueChanged={onCellValueChanged}
           cellSelection={{ handle: { mode: 'range' } }}
           getContextMenuItems={getContextMenuItems}
+          sideBar={sideBar}
+          statusBar={statusBar}
+          rowGroupPanelShow='always'
+          enableCharts
+          groupDefaultExpanded={1}
           stopEditingWhenCellsLoseFocus
           animateRows
           rowHeight={44}
