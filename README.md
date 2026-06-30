@@ -100,6 +100,28 @@ Start the server
   pnpm run dev
 ```
 
+## Environment Variables
+
+This repository only commits `.env.example` as a variable template. Do not commit real environment files.
+
+Runtime/test/production values must be configured in local private files, CI/CD secrets, or container runtime environment variables.
+
+API variables used by the frontend:
+
+- `VITE_API_HOST` - API host. Keep empty for the Docker + Nginx deployment so the frontend requests same-origin `/api`.
+- `VITE_API_PREFIX` - API path prefix, defaults to `/api`.
+- `VITE_API_BASE_URL` - optional full override. If set, it takes precedence over `VITE_API_HOST` + `VITE_API_PREFIX`.
+
+For the recommended image deployment, do not bake test/production API hosts into Vite. Configure `API_UPSTREAM` on the Nginx container instead.
+
+Examples:
+
+```bash
+pnpm run dev                    # local frontend
+pnpm run dev:test               # local test mode, may use private .env.test.local
+pnpm run build                  # production static build, API still same-origin /api
+```
+
 ## Sponsoring this project ❤️
 
 If you find this project helpful or use this in your own work, consider [sponsoring me](https://github.com/sponsors/satnaing) to support development and maintenance. You can [buy me a coffee](https://buymeacoffee.com/satnaing) as well. Don’t worry, every penny helps. Thank you! 🙏

@@ -1,0 +1,13 @@
+services:
+  admin-fe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dohozzgrid-admin-fe:local
+    ports:
+      - "8080:80"
+    environment:
+      # API_UPSTREAM is scheme + host + port only. Nginx preserves the /api/... path.
+      API_UPSTREAM: "http://host.docker.internal:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
