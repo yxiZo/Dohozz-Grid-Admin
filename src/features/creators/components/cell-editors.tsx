@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { type CustomCellEditorProps, useGridCellEditor } from 'ag-grid-react'
+import { type CustomCellEditorProps } from 'ag-grid-react'
 import { type ICellRendererParams } from 'ag-grid-community'
 import { format, parse, isValid } from 'date-fns'
 import { Check, CalendarIcon } from 'lucide-react'
@@ -88,8 +88,6 @@ export function ComboboxCellEditor(
   const [search, setSearch] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useGridCellEditor({ isPopup: () => true })
-
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 0)
     return () => clearTimeout(t)
@@ -152,8 +150,6 @@ export function ComboboxCellEditor(
 
 export function DateCellEditor(props: CustomCellEditorProps<Creator, string>) {
   const { value, onValueChange, stopEditing } = props
-
-  useGridCellEditor({ isPopup: () => true })
 
   const selected = useMemo(() => {
     if (!value) return undefined
