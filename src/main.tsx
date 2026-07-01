@@ -19,6 +19,16 @@ import { routeTree } from './routeTree.gen'
 // Styles
 import './styles/index.css'
 
+async function enableMocking() {
+  if (import.meta.env.VITE_MOCK_ENABLED !== 'true') return
+
+  const { worker } = await import('./mocks/browser')
+
+  return worker.start({
+    onUnhandledRequest: 'bypass',
+  })
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -91,20 +101,22 @@ declare module '@tanstack/react-router' {
 // Render the app
 const rootElement = document.getElementById('root')!
 if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement)
-  root.render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <FontProvider>
-            <LanguageProvider>
-              <DirectionProvider>
-                <RouterProvider router={router} />
-              </DirectionProvider>
-            </LanguageProvider>
-          </FontProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </StrictMode>
-  )
+  enableMocking().then(() => {
+    const root = ReactDOM.createRoot(rootElement)
+    root.render(
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <FontProvider>
+              <LanguageProvider>
+                <DirectionProvider>
+                  <RouterProvider router={router} />
+                </DirectionProvider>
+              </LanguageProvider>
+            </FontProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </StrictMode>
+    )
+  })
 }

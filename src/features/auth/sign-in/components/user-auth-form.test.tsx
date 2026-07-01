@@ -4,9 +4,10 @@ import { type Locator, userEvent } from 'vitest/browser'
 import { UserAuthForm } from './user-auth-form'
 
 const FORM_MESSAGES = {
-  emailEmpty: 'Please enter your email.',
-  passwordEmpty: 'Please enter your password.',
-  passwordShort: 'Password must be at least 7 characters long.',
+  usernameEmpty: '请输入手机号',
+  usernameInvalid: '手机号格式不正确',
+  passwordEmpty: '请输入密码',
+  passwordShort: '密码长度不能少于 6 位',
 } as const
 
 const navigate = vi.fn()
@@ -49,10 +50,19 @@ vi.mock('@/lib/utils', async (orig) => ({
   sleep: vi.fn(() => Promise.resolve()),
 }))
 
+vi.mock('../mock-auth', () => ({
+  loginWithMock: vi.fn(() =>
+    Promise.resolve({
+      token: 'mock-access-token',
+      exp: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+  ),
+}))
+
 describe('UserAuthForm', () => {
   describe('Rendering without redirectTo', () => {
     let screen: RenderResult
-    let emailInput: Locator
+    let usernameInput: Locator
     let passwordInput: Locator
     let signInButton: Locator
     let forgotPasswordLink: Locator
@@ -60,14 +70,14 @@ describe('UserAuthForm', () => {
     beforeEach(async () => {
       vi.clearAllMocks()
       screen = await render(<UserAuthForm />)
-      emailInput = screen.getByRole('textbox', { name: /^Email$/i })
-      passwordInput = screen.getByLabelText(/^Password$/i)
-      signInButton = screen.getByRole('button', { name: /^Sign in$/i })
-      forgotPasswordLink = screen.getByText(/^Forgot password\?$/i)
+      usernameInput = screen.getByRole('textbox', { name: /^手机号$/ })
+      passwordInput = screen.getByLabelText(/^密码$/)
+      signInButton = screen.getByRole('button', { name: /^登录$/ })
+      forgotPasswordLink = screen.getByText(/^忘记密码？$/)
     })
 
     it('renders fields, submit button, and forgot password link', async () => {
-      await expect.element(emailInput).toBeInTheDocument()
+      await expect.element(usernameInput).toBeInTheDocument()
       await expect.element(passwordInput).toBeInTheDocument()
       await expect.element(signInButton).toBeInTheDocument()
       await expect.element(forgotPasswordLink).toBeInTheDocument()
@@ -77,7 +87,7 @@ describe('UserAuthForm', () => {
       await userEvent.click(signInButton)
 
       await expect
-        .element(screen.getByText(FORM_MESSAGES.emailEmpty))
+        .element(screen.getByText(FORM_MESSAGES.usernameEmpty))
         .toBeInTheDocument()
       await expect
         .element(screen.getByText(FORM_MESSAGES.passwordEmpty))
@@ -85,16 +95,16 @@ describe('UserAuthForm', () => {
     })
 
     it('authenticates and navigates to default route on success', async () => {
-      await userEvent.fill(emailInput, 'a@b.com')
-      await userEvent.fill(passwordInput, '1234567')
+      await userEvent.fill(usernameInput, '13800138000')
+      await userEvent.fill(passwordInput, '123456')
 
       await userEvent.click(signInButton)
 
       await vi.waitFor(() => expect(setUserMock).toHaveBeenCalledOnce())
       expect(setUserMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          email: 'a@b.com',
-          accountNo: expect.any(String),
+          email: '',
+          accountNo: '13800138000',
           role: expect.any(Array),
           exp: expect.any(Number),
         })
@@ -115,10 +125,13 @@ describe('UserAuthForm', () => {
       <UserAuthForm redirectTo='/settings' />
     )
 
-    await userEvent.fill(getByRole('textbox', { name: /Email/i }), 'a@b.com')
-    await userEvent.fill(getByLabelText('Password'), '1234567')
+    await userEvent.fill(
+      getByRole('textbox', { name: /^手机号$/ }),
+      '13800138000'
+    )
+    await userEvent.fill(getByLabelText(/^密码$/), '123456')
 
-    await userEvent.click(getByRole('button', { name: /Sign in/i }))
+    await userEvent.click(getByRole('button', { name: /^登录$/ }))
 
     await vi.waitFor(() => expect(setUserMock).toHaveBeenCalledOnce())
     expect(setAccessTokenMock).toHaveBeenCalledOnce()

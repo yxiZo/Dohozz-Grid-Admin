@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
-import { AxiosError } from 'axios'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
@@ -20,7 +19,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
-import { login } from '../api'
+import { loginWithMock } from '../mock-auth'
 
 const formSchema = z.object({
   username: z
@@ -59,7 +58,7 @@ export function UserAuthForm({
     setIsLoading(true)
 
     try {
-      const result = await login(data)
+      const result = await loginWithMock(data)
       auth.setUser({
         accountNo: data.username,
         email: '',
@@ -70,10 +69,7 @@ export function UserAuthForm({
       toast.success('登录成功')
       navigate({ to: redirectTo || '/', replace: true })
     } catch (error) {
-      const message =
-        error instanceof AxiosError
-          ? error.response?.data?.message || '登录失败'
-          : '登录失败'
+      const message = error instanceof Error ? error.message : '登录失败'
       toast.error(message)
     } finally {
       setIsLoading(false)
