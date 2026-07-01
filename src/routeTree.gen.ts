@@ -34,6 +34,9 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedCreatorsVideosRouteImport } from './routes/_authenticated/creators/videos'
+import { Route as AuthenticatedCreatorsSamplesRouteImport } from './routes/_authenticated/creators/samples'
+import { Route as AuthenticatedCreatorsOutreachRouteImport } from './routes/_authenticated/creators/outreach'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -167,6 +170,24 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCreatorsVideosRoute =
+  AuthenticatedCreatorsVideosRouteImport.update({
+    id: '/creators/videos',
+    path: '/creators/videos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCreatorsSamplesRoute =
+  AuthenticatedCreatorsSamplesRouteImport.update({
+    id: '/creators/samples',
+    path: '/creators/samples',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCreatorsOutreachRoute =
+  AuthenticatedCreatorsOutreachRouteImport.update({
+    id: '/creators/outreach',
+    path: '/creators/outreach',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -181,6 +202,9 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/creators/outreach': typeof AuthenticatedCreatorsOutreachRoute
+  '/creators/samples': typeof AuthenticatedCreatorsSamplesRoute
+  '/creators/videos': typeof AuthenticatedCreatorsVideosRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -206,6 +230,9 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/creators/outreach': typeof AuthenticatedCreatorsOutreachRoute
+  '/creators/samples': typeof AuthenticatedCreatorsSamplesRoute
+  '/creators/videos': typeof AuthenticatedCreatorsVideosRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -234,6 +261,9 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/creators/outreach': typeof AuthenticatedCreatorsOutreachRoute
+  '/_authenticated/creators/samples': typeof AuthenticatedCreatorsSamplesRoute
+  '/_authenticated/creators/videos': typeof AuthenticatedCreatorsVideosRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -262,6 +292,9 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/creators/outreach'
+    | '/creators/samples'
+    | '/creators/videos'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -287,6 +320,9 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/creators/outreach'
+    | '/creators/samples'
+    | '/creators/videos'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -314,6 +350,9 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/creators/outreach'
+    | '/_authenticated/creators/samples'
+    | '/_authenticated/creators/videos'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
@@ -519,6 +558,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/creators/videos': {
+      id: '/_authenticated/creators/videos'
+      path: '/creators/videos'
+      fullPath: '/creators/videos'
+      preLoaderRoute: typeof AuthenticatedCreatorsVideosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/creators/samples': {
+      id: '/_authenticated/creators/samples'
+      path: '/creators/samples'
+      fullPath: '/creators/samples'
+      preLoaderRoute: typeof AuthenticatedCreatorsSamplesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/creators/outreach': {
+      id: '/_authenticated/creators/outreach'
+      path: '/creators/outreach'
+      fullPath: '/creators/outreach'
+      preLoaderRoute: typeof AuthenticatedCreatorsOutreachRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -548,6 +608,9 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedCreatorsOutreachRoute: typeof AuthenticatedCreatorsOutreachRoute
+  AuthenticatedCreatorsSamplesRoute: typeof AuthenticatedCreatorsSamplesRoute
+  AuthenticatedCreatorsVideosRoute: typeof AuthenticatedCreatorsVideosRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
@@ -560,6 +623,9 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedCreatorsOutreachRoute: AuthenticatedCreatorsOutreachRoute,
+  AuthenticatedCreatorsSamplesRoute: AuthenticatedCreatorsSamplesRoute,
+  AuthenticatedCreatorsVideosRoute: AuthenticatedCreatorsVideosRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,

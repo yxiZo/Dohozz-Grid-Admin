@@ -24,6 +24,19 @@ const translations = {
     'leads.viewKanban': '看板视图',
     'leads.kanbanHint': '拖拽卡片可改变线索状态',
     'leads.totalAmount': '金额合计',
+    'creators.addRow': '新增达人',
+    'creators.deleteRow': '删除选中行',
+    'creators.export': '导出 CSV',
+    'creators.rowCount': '共 {count} 位达人',
+    'creators.outreach.title': '建联提报',
+    'creators.outreach.subtitle':
+      '达人建联与提报审核，悬浮查看达人卡片，点击达人可编辑完整信息。',
+    'creators.samples.title': '寄样管理',
+    'creators.samples.subtitle':
+      '寄样进度与合作跟进，悬浮查看达人卡片，点击达人可编辑完整信息。',
+    'creators.videos.title': '视频验收',
+    'creators.videos.subtitle':
+      '视频交付与履约验收，悬浮查看达人卡片，点击达人可编辑完整信息。',
     'language.label': '语言',
   },
   en: {
@@ -38,6 +51,19 @@ const translations = {
     'leads.viewKanban': 'Kanban',
     'leads.kanbanHint': 'Drag a card to change its status',
     'leads.totalAmount': 'Total Amount',
+    'creators.addRow': 'Add Creator',
+    'creators.deleteRow': 'Delete Selected',
+    'creators.export': 'Export CSV',
+    'creators.rowCount': '{count} creators',
+    'creators.outreach.title': 'Outreach & Submission',
+    'creators.outreach.subtitle':
+      'Creator outreach and submission review. Hover to preview the creator card, click to edit full details.',
+    'creators.samples.title': 'Sample Management',
+    'creators.samples.subtitle':
+      'Track sampling progress and collaboration. Hover to preview the creator card, click to edit full details.',
+    'creators.videos.title': 'Video Verification',
+    'creators.videos.subtitle':
+      'Video delivery and fulfillment review. Hover to preview the creator card, click to edit full details.',
     'language.label': 'Language',
   },
 } as const

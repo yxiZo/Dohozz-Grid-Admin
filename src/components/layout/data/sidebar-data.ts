@@ -1,6 +1,9 @@
 import {
   LayoutDashboard,
   Table2,
+  UserPlus,
+  PackageCheck,
+  Clapperboard,
   AudioWaveform,
   Command,
   GalleryVerticalEnd,
@@ -43,6 +46,26 @@ export const sidebarData: SidebarData = {
           title: '客户/线索',
           url: '/leads',
           icon: Table2,
+        },
+      ],
+    },
+    {
+      title: '达人运营',
+      items: [
+        {
+          title: '建联提报',
+          url: '/creators/outreach',
+          icon: UserPlus,
+        },
+        {
+          title: '寄样管理',
+          url: '/creators/samples',
+          icon: PackageCheck,
+        },
+        {
+          title: '视频验收',
+          url: '/creators/videos',
+          icon: Clapperboard,
         },
       ],
     },
