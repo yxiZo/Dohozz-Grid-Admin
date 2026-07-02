@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -23,30 +24,49 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import {
   type Creator,
+  type CreatorStage,
   bdOptions,
+  collabStatusOptions,
   collabTypeOptions,
   contentCategoryOptions,
   contentTypeOptions,
+  countryOptions,
   dedupOptions,
   executionOptions,
   followerTierOptions,
+  influencerCategoryOptions,
+  presentationStyleOptions,
   reviewOptions,
   workingStatusOptions,
+  yesNoOptions,
 } from '../data/data'
 
 type CreatorEditDialogProps = {
+  stage: CreatorStage
   creator: Creator | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (creator: Creator) => void
 }
 
+type StringCreatorKey = {
+  [K in keyof Creator]: Creator[K] extends string ? K : never
+}[keyof Creator]
+
+type NumberCreatorKey = {
+  [K in keyof Creator]: Creator[K] extends number ? K : never
+}[keyof Creator]
+
 function initials(handle: string) {
   const h = (handle ?? '').replace(/^@/, '').trim()
   return h.slice(0, 2).toUpperCase() || '?'
 }
 
-function Field({
+function cloneCreator(creator: Creator | null) {
+  return creator ? { ...creator } : null
+}
+
+function FormField({
   label,
   children,
 }: {
@@ -55,7 +75,7 @@ function Field({
 }) {
   return (
     <div className='flex flex-col gap-1.5'>
-      <Label className='text-muted-foreground text-xs'>{label}</Label>
+      <Label className='text-xs text-muted-foreground'>{label}</Label>
       {children}
     </div>
   )
@@ -63,369 +83,268 @@ function Field({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className='text-foreground col-span-full text-sm font-semibold'>
+    <h4 className='col-span-full text-sm font-semibold text-foreground'>
       {children}
     </h4>
   )
 }
 
 export function CreatorEditDialog({
+  stage,
   creator,
   open,
   onOpenChange,
   onSave,
 }: CreatorEditDialogProps) {
-  const [draftState, setDraftState] = useState(() => ({
-    source: creator,
-    value: creator,
-  }))
-
-  if (draftState.source !== creator) {
-    setDraftState({ source: creator, value: creator })
-  }
-
-  const draft = draftState.value
+  const [draft, setDraft] = useState<Creator | null>(() =>
+    cloneCreator(creator)
+  )
 
   if (!draft) return null
 
-  const set = <K extends keyof Creator>(key: K, value: Creator[K]) =>
-    setDraftState((prev) =>
-      prev.value ? { ...prev, value: { ...prev.value, [key]: value } } : prev
-    )
+  const set = <K extends keyof Creator>(key: K, value: Creator[K]) => {
+    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev))
+  }
 
-  const num = (v: string) => (v === '' ? 0 : Number(v))
+  const numberValue = (value: string) => (value === '' ? 0 : Number(value))
+
+  const renderTextField = (
+    field: StringCreatorKey,
+    label: string,
+    type: 'text' | 'date' | 'email' | 'url' = 'text'
+  ) => (
+    <FormField label={label}>
+      <Input
+        type={type}
+        value={draft[field]}
+        onChange={(e) => set(field, e.target.value)}
+      />
+    </FormField>
+  )
+
+  const renderTextareaField = (field: StringCreatorKey, label: string) => (
+    <div className='col-span-full'>
+      <FormField label={label}>
+        <Textarea
+          value={draft[field]}
+          onChange={(e) => set(field, e.target.value)}
+          rows={2}
+        />
+      </FormField>
+    </div>
+  )
+
+  const renderNumberField = (
+    field: NumberCreatorKey,
+    label: string,
+    options?: { min?: number; max?: number; step?: number }
+  ) => (
+    <FormField label={label}>
+      <Input
+        type='number'
+        min={options?.min}
+        max={options?.max}
+        step={options?.step}
+        value={draft[field]}
+        onChange={(e) => set(field, numberValue(e.target.value))}
+      />
+    </FormField>
+  )
+
+  const renderSelectField = (
+    field: StringCreatorKey,
+    label: string,
+    options: readonly string[]
+  ) => (
+    <FormField label={label}>
+      <Select value={draft[field]} onValueChange={(value) => set(field, value)}>
+        <SelectTrigger className='w-full'>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </FormField>
+  )
 
   const handleSave = () => {
-    if (draft) onSave(draft)
+    onSave(draft)
     onOpenChange(false)
   }
 
+  const renderIdentitySection = () => (
+    <>
+      <SectionTitle>基础信息</SectionTitle>
+      {renderTextField('tiktokId', 'Tiktok ID')}
+      {renderTextField('series', 'Series')}
+      {renderTextField('profile', 'Profile', 'url')}
+      {renderSelectField('bd', 'BD', bdOptions)}
+      {renderNumberField('follower', 'Follower')}
+      {renderSelectField('followerTier', 'Follower Tier', followerTierOptions)}
+      {renderTextField('email', 'Email', 'email')}
+      {renderTextField('whatsapp', 'Whatsapp')}
+      {renderTextField('instagram', 'Instagram')}
+      {renderTextField('facebook', 'Facebook')}
+    </>
+  )
+
+  const renderOutreachSection = () => (
+    <>
+      <Separator className='col-span-full' />
+      <SectionTitle>提报审核</SectionTitle>
+      {renderSelectField('dedup', '查重', dedupOptions)}
+      {renderSelectField('review', '审核', reviewOptions)}
+      {renderSelectField(
+        'workingStatus',
+        'Working Status',
+        workingStatusOptions
+      )}
+      {renderSelectField('execution', 'Execution 执行力', executionOptions)}
+      {renderTextareaField('notApprovalReason', 'Not Approval Reason')}
+
+      <Separator className='col-span-full' />
+      <SectionTitle>内容与合作</SectionTitle>
+      {renderSelectField(
+        'contentCategory',
+        '内容类目 Content Category',
+        contentCategoryOptions
+      )}
+      {renderTextField('influencerFeatures', '博主特点 Influencer Features')}
+      {renderSelectField(
+        'collabType',
+        'Collab Type 合作类型',
+        collabTypeOptions
+      )}
+      {renderSelectField('contentType', 'Content Type', contentTypeOptions)}
+      {renderTextField('dateRegistration', 'Date Registration', 'date')}
+      {renderTextField('collabDate', 'Collab Date', 'date')}
+      {renderNumberField('agreedVideos', '约定视频数')}
+      {renderNumberField('completedVideos', '已完成视频条数')}
+      {renderNumberField('collabAmount', 'Collab Amount')}
+      {renderNumberField('videoAmount', 'Video Amount')}
+      {renderNumberField('gmv', 'GMV')}
+      {renderNumberField('avgExposure', 'AVG Exposure Count')}
+      {renderNumberField('fulfilledCollab', 'Fulfilled Collab 履约数')}
+      {renderNumberField('fulfilledRate', 'Fulfilled Rate 履约率 (0-1)', {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      })}
+      {renderNumberField('avgPublishDays', '平均发布用时 (天)')}
+      {renderTextField('collabSku', 'Collab SKU')}
+    </>
+  )
+
+  const renderSampleSection = () => (
+    <>
+      <Separator className='col-span-full' />
+      <SectionTitle>寄样管理</SectionTitle>
+      {renderTextField('collabCode', 'Collab 合作编码')}
+      {renderTextField('dateSampleSend', 'Date Sample Send 寄样时间', 'date')}
+      {renderTextField('brand', '品牌')}
+      {renderTextField('sku', 'SKU')}
+      {renderSelectField('collabType', 'Collab Type', collabTypeOptions)}
+      {renderSelectField(
+        'collabStatus',
+        'Collab Status 合作状态',
+        collabStatusOptions
+      )}
+      {renderTextField('videoLink', 'Video Link', 'url')}
+      {renderSelectField('hasSales', '是否出单达人', yesNoOptions)}
+      {renderNumberField('gmv', 'GMV')}
+      {renderNumberField('fulfilledRate', '完成度 (0-1)', {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      })}
+      {renderTextField('collabSku', 'Collab SKU')}
+    </>
+  )
+
+  const renderVideoSection = () => (
+    <>
+      <Separator className='col-span-full' />
+      <SectionTitle>视频验收</SectionTitle>
+      {renderTextField('videoPublishedDate', '视频发布日期', 'date')}
+      {renderTextField('dateVideoPost', 'Date Video Post（填表日期）', 'date')}
+      {renderTextField('sku', 'SKU')}
+      {renderTextField('videoLink', 'Video Link', 'url')}
+      {renderTextField('videoEncoding', 'Video Encoding')}
+      {renderSelectField(
+        'influencerCategory',
+        'Influencer Category',
+        influencerCategoryOptions
+      )}
+      {renderSelectField(
+        'presentationStyle',
+        'Presentation Style',
+        presentationStyleOptions
+      )}
+      {renderTextField('videoContent', 'Video Content')}
+      {renderTextField('videoScript', 'Video Script')}
+      {renderTextField('tiktokIdLink', 'Tiktok ID（链接', 'url')}
+      {renderSelectField('country', 'Country', countryOptions)}
+      {renderTextField('videoCode', '视频code')}
+      {renderSelectField(
+        'contentCategory',
+        'Content Category',
+        contentCategoryOptions
+      )}
+      {renderSelectField('collabType', 'Collab Type', collabTypeOptions)}
+      {renderSelectField('hasSales', '是否出单', yesNoOptions)}
+      {renderNumberField('cumulativeInteractions', '互动量（累计）')}
+      {renderNumberField('likes', '点赞数')}
+      {renderNumberField('comments', '评论数')}
+      {renderNumberField('shares', '分享数')}
+      {renderNumberField('productExposuresCumulative', '商品曝光次数（累计）')}
+      {renderNumberField('productClicks', '商品点击次数')}
+      {renderNumberField('interactionRate', '互动率 (0-1)', {
+        min: 0,
+        max: 1,
+        step: 0.0001,
+      })}
+      {renderNumberField('dealPieces', '成交件数')}
+      {renderNumberField('gmv', 'GMV（总）')}
+      {renderTextField('scriptDirection', '脚本方向')}
+      {renderTextField('skuCopy', 'SKU副本')}
+      {renderTextField('tiktokIdCopy', 'Tiktok ID副本')}
+      {renderTextField('bdCopy', 'BD 副本')}
+      {renderTextField('collabTypeCopy', 'Collab Type副本')}
+    </>
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl'>
-        <DialogHeader className='space-y-0 border-b p-6'>
+      <DialogContent className='max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-4xl'>
+        <DialogHeader className='border-b p-6'>
           <div className='flex items-center gap-3'>
             <Avatar className='size-11'>
-              <AvatarFallback className='bg-primary/10 text-primary font-medium'>
+              <AvatarFallback className='bg-primary/10 font-medium text-primary'>
                 {initials(draft.tiktokId)}
               </AvatarFallback>
             </Avatar>
             <div>
               <DialogTitle>{draft.tiktokId || '新达人'}</DialogTitle>
-              <DialogDescription>编辑达人信息，保存后即时生效</DialogDescription>
+              <DialogDescription>
+                编辑当前阶段信息，保存后即时生效
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <ScrollArea className='max-h-[60vh]'>
-          <div className='grid grid-cols-1 gap-4 p-6 sm:grid-cols-2'>
-            <SectionTitle>基础信息</SectionTitle>
-            <Field label='Tiktok ID'>
-              <Input
-                value={draft.tiktokId}
-                onChange={(e) => set('tiktokId', e.target.value)}
-              />
-            </Field>
-            <Field label='Series'>
-              <Input
-                value={draft.series}
-                onChange={(e) => set('series', e.target.value)}
-              />
-            </Field>
-            <Field label='Profile'>
-              <Input
-                value={draft.profile}
-                onChange={(e) => set('profile', e.target.value)}
-              />
-            </Field>
-            <Field label='Date Registration'>
-              <Input
-                type='date'
-                value={draft.dateRegistration}
-                onChange={(e) => set('dateRegistration', e.target.value)}
-              />
-            </Field>
-            <Field label='BD'>
-              <Select value={draft.bd} onValueChange={(v) => set('bd', v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {bdOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='Follower'>
-              <Input
-                type='number'
-                value={draft.follower}
-                onChange={(e) => set('follower', num(e.target.value))}
-              />
-            </Field>
-            <Field label='Follower Tier'>
-              <Select
-                value={draft.followerTier}
-                onValueChange={(v) => set('followerTier', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {followerTierOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Separator className='col-span-full' />
-            <SectionTitle>审核与状态</SectionTitle>
-            <Field label='查重'>
-              <Select value={draft.dedup} onValueChange={(v) => set('dedup', v as Creator['dedup'])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {dedupOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='审核'>
-              <Select value={draft.review} onValueChange={(v) => set('review', v as Creator['review'])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reviewOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='Working Status'>
-              <Select
-                value={draft.workingStatus}
-                onValueChange={(v) => set('workingStatus', v as Creator['workingStatus'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {workingStatusOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='Execution 执行力'>
-              <Select
-                value={draft.execution}
-                onValueChange={(v) => set('execution', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {executionOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <div className='col-span-full'>
-              <Field label='Not Approval Reason'>
-                <Textarea
-                  value={draft.notApprovalReason}
-                  onChange={(e) => set('notApprovalReason', e.target.value)}
-                  rows={2}
-                />
-              </Field>
-            </div>
-
-            <Separator className='col-span-full' />
-            <SectionTitle>内容与合作</SectionTitle>
-            <Field label='内容类目 Content Category'>
-              <Select
-                value={draft.contentCategory}
-                onValueChange={(v) => set('contentCategory', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {contentCategoryOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='博主特点 Influencer Features'>
-              <Input
-                value={draft.influencerFeatures}
-                onChange={(e) => set('influencerFeatures', e.target.value)}
-              />
-            </Field>
-            <Field label='Collab Type 合作类型'>
-              <Select
-                value={draft.collabType}
-                onValueChange={(v) => set('collabType', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {collabTypeOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='Content Type'>
-              <Select
-                value={draft.contentType}
-                onValueChange={(v) => set('contentType', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {contentTypeOptions.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='Collab SKU'>
-              <Input
-                value={draft.collabSku}
-                onChange={(e) => set('collabSku', e.target.value)}
-              />
-            </Field>
-            <Field label='Collab Date'>
-              <Input
-                type='date'
-                value={draft.collabDate}
-                onChange={(e) => set('collabDate', e.target.value)}
-              />
-            </Field>
-
-            <Separator className='col-span-full' />
-            <SectionTitle>联系方式</SectionTitle>
-            <Field label='Whatsapp'>
-              <Input
-                value={draft.whatsapp}
-                onChange={(e) => set('whatsapp', e.target.value)}
-              />
-            </Field>
-            <Field label='Email'>
-              <Input
-                value={draft.email}
-                onChange={(e) => set('email', e.target.value)}
-              />
-            </Field>
-            <Field label='Instagram'>
-              <Input
-                value={draft.instagram}
-                onChange={(e) => set('instagram', e.target.value)}
-              />
-            </Field>
-            <Field label='Facebook'>
-              <Input
-                value={draft.facebook}
-                onChange={(e) => set('facebook', e.target.value)}
-              />
-            </Field>
-
-            <Separator className='col-span-full' />
-            <SectionTitle>履约与业绩</SectionTitle>
-            <Field label='约定视频数'>
-              <Input
-                type='number'
-                value={draft.agreedVideos}
-                onChange={(e) => set('agreedVideos', num(e.target.value))}
-              />
-            </Field>
-            <Field label='已完成视频条数'>
-              <Input
-                type='number'
-                value={draft.completedVideos}
-                onChange={(e) => set('completedVideos', num(e.target.value))}
-              />
-            </Field>
-            <Field label='Collab Amount'>
-              <Input
-                type='number'
-                value={draft.collabAmount}
-                onChange={(e) => set('collabAmount', num(e.target.value))}
-              />
-            </Field>
-            <Field label='Video Amount'>
-              <Input
-                type='number'
-                value={draft.videoAmount}
-                onChange={(e) => set('videoAmount', num(e.target.value))}
-              />
-            </Field>
-            <Field label='GMV'>
-              <Input
-                type='number'
-                value={draft.gmv}
-                onChange={(e) => set('gmv', num(e.target.value))}
-              />
-            </Field>
-            <Field label='AVG Exposure Count'>
-              <Input
-                type='number'
-                value={draft.avgExposure}
-                onChange={(e) => set('avgExposure', num(e.target.value))}
-              />
-            </Field>
-            <Field label='Fulfilled Collab 履约数'>
-              <Input
-                type='number'
-                value={draft.fulfilledCollab}
-                onChange={(e) => set('fulfilledCollab', num(e.target.value))}
-              />
-            </Field>
-            <Field label='Fulfilled Rate 履约率 (0-1)'>
-              <Input
-                type='number'
-                step='0.01'
-                min='0'
-                max='1'
-                value={draft.fulfilledRate}
-                onChange={(e) => set('fulfilledRate', num(e.target.value))}
-              />
-            </Field>
-            <Field label='平均发布用时 (天)'>
-              <Input
-                type='number'
-                value={draft.avgPublishDays}
-                onChange={(e) => set('avgPublishDays', num(e.target.value))}
-              />
-            </Field>
+          <div className='grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3'>
+            {renderIdentitySection()}
+            {stage === 'outreach' && renderOutreachSection()}
+            {stage === 'samples' && renderSampleSection()}
+            {stage === 'videos' && renderVideoSection()}
           </div>
         </ScrollArea>
 

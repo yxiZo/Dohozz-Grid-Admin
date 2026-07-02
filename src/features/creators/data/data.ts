@@ -141,13 +141,26 @@ export const stageConfig: Record<
   CreatorStage,
   { titleKey: string; subtitleKey: string }
 > = {
-  outreach: { titleKey: 'creators.outreach.title', subtitleKey: 'creators.outreach.subtitle' },
-  samples: { titleKey: 'creators.samples.title', subtitleKey: 'creators.samples.subtitle' },
-  videos: { titleKey: 'creators.videos.title', subtitleKey: 'creators.videos.subtitle' },
+  outreach: {
+    titleKey: 'creators.outreach.title',
+    subtitleKey: 'creators.outreach.subtitle',
+  },
+  samples: {
+    titleKey: 'creators.samples.title',
+    subtitleKey: 'creators.samples.subtitle',
+  },
+  videos: {
+    titleKey: 'creators.videos.title',
+    subtitleKey: 'creators.videos.subtitle',
+  },
 }
 
 export const dedupOptions: readonly DedupStatus[] = ['未查重', '重复', '通过']
-export const reviewOptions: readonly ReviewStatus[] = ['待审核', '已通过', '未通过']
+export const reviewOptions: readonly ReviewStatus[] = [
+  '待审核',
+  '已通过',
+  '未通过',
+]
 export const workingStatusOptions: readonly WorkingStatus[] = [
   '未开始',
   '沟通中',
@@ -170,14 +183,42 @@ export const contentCategoryOptions = [
   '食品',
   '健身',
 ] as const
-export const collabTypeOptions = ['免费寄样', '付费合作', '佣金分成', '混合'] as const
-export const contentTypeOptions = ['短视频', '直播', '图文', '短视频+直播'] as const
+export const collabTypeOptions = [
+  '免费寄样',
+  '付费合作',
+  '佣金分成',
+  '混合',
+] as const
+export const contentTypeOptions = [
+  '短视频',
+  '直播',
+  '图文',
+  '短视频+直播',
+] as const
 export const bdOptions = ['Anna', 'Bella', 'Chris', 'David', 'Elena'] as const
 export const executionOptions = ['优秀', '良好', '一般', '待观察'] as const
-export const collabStatusOptions = ['待寄样', '已寄样', '运输中', '已签收', '已取消'] as const
+export const collabStatusOptions = [
+  '待寄样',
+  '已寄样',
+  '运输中',
+  '已签收',
+  '已取消',
+] as const
 export const yesNoOptions = ['是', '否'] as const
-export const influencerCategoryOptions = ['美妆', '科技', '家居', '生活方式', '母婴'] as const
-export const presentationStyleOptions = ['口播', '测评', '开箱', '教程', '剧情'] as const
+export const influencerCategoryOptions = [
+  '美妆',
+  '科技',
+  '家居',
+  '生活方式',
+  '母婴',
+] as const
+export const presentationStyleOptions = [
+  '口播',
+  '测评',
+  '开箱',
+  '教程',
+  '剧情',
+] as const
 export const countryOptions = ['ID', 'TH', 'VN', 'PH', 'MY', 'US'] as const
 
 // Color tokens for status-style pills.
@@ -202,6 +243,84 @@ let idCounter = 0
 export function newCreatorId() {
   idCounter += 1
   return `C-${Date.now().toString().slice(-6)}-${idCounter}`
+}
+
+function todayLocal() {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function createBlankCreator(stage: CreatorStage): Creator {
+  const today = todayLocal()
+  const id = newCreatorId()
+
+  return {
+    id,
+    dedup: '未查重',
+    tiktokId: '',
+    series: '',
+    review: '待审核',
+    notApprovalReason: '',
+    agreedVideos: 0,
+    completedVideos: 0,
+    dateRegistration: today,
+    bd: '',
+    profile: '',
+    follower: 0,
+    followerTier: followerTierOptions[0],
+    workingStatus: '未开始',
+    contentCategory: '',
+    influencerFeatures: '',
+    collabType: collabTypeOptions[0],
+    contentType: contentTypeOptions[0],
+    whatsapp: '',
+    instagram: '',
+    facebook: '',
+    email: '',
+    collabDate: today,
+    collabAmount: 0,
+    videoAmount: 0,
+    gmv: 0,
+    collabCode: stage === 'samples' ? id.replace('C-', 'COL-') : '',
+    dateSampleSend: today,
+    brand: '',
+    sku: '',
+    collabStatus: collabStatusOptions[0],
+    videoLink: '',
+    hasSales: yesNoOptions[1],
+    videoPublishedDate: today,
+    dateVideoPost: today,
+    videoEncoding: '',
+    influencerCategory: influencerCategoryOptions[0],
+    presentationStyle: presentationStyleOptions[0],
+    videoContent: '',
+    videoScript: '',
+    tiktokIdLink: '',
+    country: countryOptions[0],
+    videoCode: '',
+    cumulativeInteractions: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    productExposuresCumulative: 0,
+    productClicks: 0,
+    interactionRate: 0,
+    dealPieces: 0,
+    scriptDirection: '',
+    skuCopy: '',
+    tiktokIdCopy: '',
+    bdCopy: '',
+    collabTypeCopy: collabTypeOptions[0],
+    avgExposure: 0,
+    collabSku: '',
+    fulfilledCollab: 0,
+    fulfilledRate: 0,
+    avgPublishDays: 0,
+    execution: executionOptions[0],
+  }
 }
 
 function makeId(i: number) {
@@ -247,7 +366,9 @@ function seededCreators(stage: CreatorStage, count: number): Creator[] {
               : followerTierOptions[4]
     const agreed = (i % 4) + 1
     const completed =
-      stage === 'videos' ? Math.min(agreed, (i % (agreed + 1))) : Math.max(0, (i % 2))
+      stage === 'videos'
+        ? Math.min(agreed, i % (agreed + 1))
+        : Math.max(0, i % 2)
     const review: ReviewStatus =
       i % 5 === 0 ? '未通过' : i % 3 === 0 ? '待审核' : '已通过'
     return {
@@ -270,7 +391,8 @@ function seededCreators(stage: CreatorStage, count: number): Creator[] {
           : stage === 'samples'
             ? '沟通中'
             : '已合作',
-      contentCategory: contentCategoryOptions[i % contentCategoryOptions.length],
+      contentCategory:
+        contentCategoryOptions[i % contentCategoryOptions.length],
       influencerFeatures: ['亲和力强', '专业测评', '高转化', '颜值博主'][i % 4],
       collabType: collabTypeOptions[i % collabTypeOptions.length],
       contentType: contentTypeOptions[i % contentTypeOptions.length],
@@ -292,18 +414,22 @@ function seededCreators(stage: CreatorStage, count: number): Creator[] {
       videoPublishedDate: daysFromNow(-(i + 1)),
       dateVideoPost: daysFromNow(-i),
       videoEncoding: `VID-${String(i + 1).padStart(5, '0')}`,
-      influencerCategory: influencerCategoryOptions[i % influencerCategoryOptions.length],
-      presentationStyle: presentationStyleOptions[i % presentationStyleOptions.length],
+      influencerCategory:
+        influencerCategoryOptions[i % influencerCategoryOptions.length],
+      presentationStyle:
+        presentationStyleOptions[i % presentationStyleOptions.length],
       videoContent: ['产品亮点', '场景演示', '真实测评', '优惠引导'][i % 4],
       videoScript: ['痛点引入', '卖点拆解', '使用前后对比', '福利收口'][i % 4],
       tiktokIdLink: `https://www.tiktok.com/@${handle}`,
       country: countryOptions[i % countryOptions.length],
       videoCode: `VC-${String(1000 + i)}`,
-      cumulativeInteractions: Math.round((Math.random() * 60000 + 500) / 10) * 10,
+      cumulativeInteractions:
+        Math.round((Math.random() * 60000 + 500) / 10) * 10,
       likes: Math.round((Math.random() * 50000 + 300) / 10) * 10,
       comments: Math.round(Math.random() * 3000 + 20),
       shares: Math.round(Math.random() * 2000 + 10),
-      productExposuresCumulative: Math.round((Math.random() * 300000 + 3000) / 100) * 100,
+      productExposuresCumulative:
+        Math.round((Math.random() * 300000 + 3000) / 100) * 100,
       productClicks: Math.round(Math.random() * 20000 + 100),
       interactionRate: Number((Math.random() * 0.12 + 0.01).toFixed(4)),
       dealPieces: Math.round(Math.random() * 200),
