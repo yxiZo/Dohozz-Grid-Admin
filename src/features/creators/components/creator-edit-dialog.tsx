@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -75,16 +75,23 @@ export function CreatorEditDialog({
   onOpenChange,
   onSave,
 }: CreatorEditDialogProps) {
-  const [draft, setDraft] = useState<Creator | null>(creator)
+  const [draftState, setDraftState] = useState(() => ({
+    source: creator,
+    value: creator,
+  }))
 
-  useEffect(() => {
-    setDraft(creator)
-  }, [creator])
+  if (draftState.source !== creator) {
+    setDraftState({ source: creator, value: creator })
+  }
+
+  const draft = draftState.value
 
   if (!draft) return null
 
   const set = <K extends keyof Creator>(key: K, value: Creator[K]) =>
-    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev))
+    setDraftState((prev) =>
+      prev.value ? { ...prev, value: { ...prev.value, [key]: value } } : prev
+    )
 
   const num = (v: string) => (v === '' ? 0 : Number(v))
 

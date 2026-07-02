@@ -2,8 +2,8 @@
 //   - outreach   建联提报
 //   - samples    寄样管理
 //   - videos     视频验收
-// The three tables use identical columns, so we abstract a single Creator
-// record and drive each stage from the same data structure.
+// Each stage exposes a different table view, while sharing one mock row model
+// so creators can still be edited with a single detail dialog.
 
 export type ReviewStatus = '待审核' | '已通过' | '未通过'
 export type DedupStatus = '未查重' | '重复' | '通过'
@@ -61,6 +61,66 @@ export type Creator = {
   videoAmount: number
   /** GMV */
   gmv: number
+  /** Collab 合作编码 */
+  collabCode: string
+  /** Date Sample Send 寄样时间 */
+  dateSampleSend: string
+  /** 品牌 */
+  brand: string
+  /** SKU */
+  sku: string
+  /** Collab Status 合作状态 */
+  collabStatus: string
+  /** Video Link */
+  videoLink: string
+  /** 是否出单 / 是否出单达人 */
+  hasSales: string
+  /** 视频发布日期 */
+  videoPublishedDate: string
+  /** Date Video Post（填表日期） */
+  dateVideoPost: string
+  /** Video Encoding */
+  videoEncoding: string
+  /** Influencer Category */
+  influencerCategory: string
+  /** Presentation Style */
+  presentationStyle: string
+  /** Video Content */
+  videoContent: string
+  /** Video Script */
+  videoScript: string
+  /** Tiktok ID（链接 */
+  tiktokIdLink: string
+  /** Country */
+  country: string
+  /** 视频code */
+  videoCode: string
+  /** 互动量（累计） */
+  cumulativeInteractions: number
+  /** 点赞数 */
+  likes: number
+  /** 评论数 */
+  comments: number
+  /** 分享数 */
+  shares: number
+  /** 商品曝光次数（累计） */
+  productExposuresCumulative: number
+  /** 商品点击次数 */
+  productClicks: number
+  /** 互动率 (0-1) */
+  interactionRate: number
+  /** 成交件数 */
+  dealPieces: number
+  /** 脚本方向 */
+  scriptDirection: string
+  /** SKU副本 */
+  skuCopy: string
+  /** Tiktok ID副本 */
+  tiktokIdCopy: string
+  /** BD 副本 */
+  bdCopy: string
+  /** Collab Type副本 */
+  collabTypeCopy: string
   /** AVG Exposure Count */
   avgExposure: number
   /** Collab SKU */
@@ -114,6 +174,11 @@ export const collabTypeOptions = ['免费寄样', '付费合作', '佣金分成'
 export const contentTypeOptions = ['短视频', '直播', '图文', '短视频+直播'] as const
 export const bdOptions = ['Anna', 'Bella', 'Chris', 'David', 'Elena'] as const
 export const executionOptions = ['优秀', '良好', '一般', '待观察'] as const
+export const collabStatusOptions = ['待寄样', '已寄样', '运输中', '已签收', '已取消'] as const
+export const yesNoOptions = ['是', '否'] as const
+export const influencerCategoryOptions = ['美妆', '科技', '家居', '生活方式', '母婴'] as const
+export const presentationStyleOptions = ['口播', '测评', '开箱', '教程', '剧情'] as const
+export const countryOptions = ['ID', 'TH', 'VN', 'PH', 'MY', 'US'] as const
 
 // Color tokens for status-style pills.
 export const reviewColorMap: Record<string, string> = {
@@ -217,6 +282,36 @@ function seededCreators(stage: CreatorStage, count: number): Creator[] {
       collabAmount: Math.round((Math.random() * 8000 + 500) / 50) * 50,
       videoAmount: agreed,
       gmv: Math.round((Math.random() * 50000 + 1000) / 100) * 100,
+      collabCode: `COL-${String(i + 1).padStart(4, '0')}`,
+      dateSampleSend: daysFromNow(-(i * 2 + 2)),
+      brand: ['Dohozz', 'Grid', 'Nova', 'Luma'][i % 4],
+      sku: skus[i % skus.length],
+      collabStatus: collabStatusOptions[i % collabStatusOptions.length],
+      videoLink: `https://www.tiktok.com/@${handle}/video/${7300000000000 + i}`,
+      hasSales: i % 3 === 0 ? '否' : '是',
+      videoPublishedDate: daysFromNow(-(i + 1)),
+      dateVideoPost: daysFromNow(-i),
+      videoEncoding: `VID-${String(i + 1).padStart(5, '0')}`,
+      influencerCategory: influencerCategoryOptions[i % influencerCategoryOptions.length],
+      presentationStyle: presentationStyleOptions[i % presentationStyleOptions.length],
+      videoContent: ['产品亮点', '场景演示', '真实测评', '优惠引导'][i % 4],
+      videoScript: ['痛点引入', '卖点拆解', '使用前后对比', '福利收口'][i % 4],
+      tiktokIdLink: `https://www.tiktok.com/@${handle}`,
+      country: countryOptions[i % countryOptions.length],
+      videoCode: `VC-${String(1000 + i)}`,
+      cumulativeInteractions: Math.round((Math.random() * 60000 + 500) / 10) * 10,
+      likes: Math.round((Math.random() * 50000 + 300) / 10) * 10,
+      comments: Math.round(Math.random() * 3000 + 20),
+      shares: Math.round(Math.random() * 2000 + 10),
+      productExposuresCumulative: Math.round((Math.random() * 300000 + 3000) / 100) * 100,
+      productClicks: Math.round(Math.random() * 20000 + 100),
+      interactionRate: Number((Math.random() * 0.12 + 0.01).toFixed(4)),
+      dealPieces: Math.round(Math.random() * 200),
+      scriptDirection: ['种草', '测评', '教程', '促销'][i % 4],
+      skuCopy: skus[i % skus.length],
+      tiktokIdCopy: `@${handle}`,
+      bdCopy: bdOptions[i % bdOptions.length],
+      collabTypeCopy: collabTypeOptions[i % collabTypeOptions.length],
       avgExposure: Math.round((Math.random() * 200000 + 5000) / 100) * 100,
       collabSku: skus[i % skus.length],
       fulfilledCollab: completed,

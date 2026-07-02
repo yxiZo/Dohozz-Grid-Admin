@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLanguage } from '@/context/language-provider'
+import { useLanguage, type TranslationKey } from '@/context/language-provider'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { LanguageSwitch } from '@/components/language-switch'
 import { Header } from '@/components/layout/header'
@@ -14,7 +14,6 @@ import {
   creatorsByStage,
   stageConfig,
 } from './data/data'
-import { type TranslationKey } from '@/context/language-provider'
 
 type CreatorsProps = {
   stage: CreatorStage
