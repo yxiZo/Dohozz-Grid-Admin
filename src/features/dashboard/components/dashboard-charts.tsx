@@ -70,7 +70,7 @@ export function TrendChart({
             fontSize: 12,
             color: 'var(--popover-foreground)',
           }}
-          formatter={(value: number) => [currency(value), gmvLabel]}
+          formatter={(value) => [currency(Number(value ?? 0)), gmvLabel]}
         />
         <Area
           type='monotone'
@@ -212,7 +212,7 @@ export function LeaderboardChart({
             fontSize: 12,
             color: 'var(--popover-foreground)',
           }}
-          formatter={(value: number) => [currency(value), gmvLabel]}
+          formatter={(value) => [currency(Number(value ?? 0)), gmvLabel]}
         />
         <Bar dataKey='value' radius={[6, 6, 0, 0]}>
           {data.map((_, i) => (
