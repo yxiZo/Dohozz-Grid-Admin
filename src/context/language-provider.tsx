@@ -14,16 +14,6 @@ export const languageOptions: { value: Language; label: string }[] = [
 
 const translations = {
   zh: {
-    'leads.title': '客户 / 线索管理',
-    'leads.subtitle': '像 Excel 一样直接编辑的表格，编辑后立即生效，无需保存。',
-    'leads.addRow': '新增行',
-    'leads.deleteRow': '删除选中行',
-    'leads.export': '导出 CSV',
-    'leads.rowCount': '共 {count} 条记录',
-    'leads.viewTable': '表格视图',
-    'leads.viewKanban': '看板视图',
-    'leads.kanbanHint': '拖拽卡片可改变线索状态',
-    'leads.totalAmount': '金额合计',
     'creators.addRow': '新增达人',
     'creators.deleteRow': '删除选中行',
     'creators.export': '导出 CSV',
@@ -40,17 +30,6 @@ const translations = {
     'language.label': '语言',
   },
   en: {
-    'leads.title': 'Customers / Leads',
-    'leads.subtitle':
-      'An Excel-like editable grid. Edits take effect instantly, no saving required.',
-    'leads.addRow': 'Add Row',
-    'leads.deleteRow': 'Delete Selected',
-    'leads.export': 'Export CSV',
-    'leads.rowCount': '{count} records',
-    'leads.viewTable': 'Table',
-    'leads.viewKanban': 'Kanban',
-    'leads.kanbanHint': 'Drag a card to change its status',
-    'leads.totalAmount': 'Total Amount',
     'creators.addRow': 'Add Creator',
     'creators.deleteRow': 'Delete Selected',
     'creators.export': 'Export CSV',

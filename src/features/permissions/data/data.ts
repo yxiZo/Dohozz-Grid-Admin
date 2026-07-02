@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  Table2,
   Megaphone,
   Users,
   Shield,
@@ -32,7 +31,6 @@ export const moduleMeta: Record<
   { label: string; icon: LucideIcon }
 > = {
   dashboard: { label: '仪表盘', icon: LayoutDashboard },
-  leads: { label: '客户/线索', icon: Table2 },
   creator: { label: '达人运营', icon: Megaphone },
   user: { label: '用户管理', icon: Users },
   role: { label: '角色管理', icon: Shield },

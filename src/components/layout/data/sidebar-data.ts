@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  Table2,
   UserPlus,
   PackageCheck,
   Clapperboard,
@@ -44,11 +43,6 @@ export const sidebarData: SidebarData = {
           title: 'Dashboard',
           url: '/',
           icon: LayoutDashboard,
-        },
-        {
-          title: '客户/线索',
-          url: '/leads',
-          icon: Table2,
         },
       ],
     },

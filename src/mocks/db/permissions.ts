@@ -20,17 +20,6 @@ const catalog: ModuleDef[] = [
     ],
   },
   {
-    module: 'leads',
-    moduleName: '客户/线索',
-    items: [
-      { code: 'leads:view', name: '访问客户线索', type: 'menu', description: '查看客户线索菜单' },
-      { code: 'leads:create', name: '新增线索', type: 'action' },
-      { code: 'leads:edit', name: '编辑线索', type: 'action' },
-      { code: 'leads:delete', name: '删除线索', type: 'action' },
-      { code: 'leads:export', name: '导出线索', type: 'action' },
-    ],
-  },
-  {
     module: 'creator',
     moduleName: '达人运营',
     items: [
