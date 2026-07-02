@@ -79,17 +79,22 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-5', className)}
+        className={cn('grid gap-6', className)}
         {...props}
       >
         <FormField
           control={form.control}
           name='username'
           render={({ field }) => (
-            <FormItem>
+            <FormItem className='space-y-2'>
               <FormLabel>手机号</FormLabel>
               <FormControl>
-                <Input placeholder='请输入手机号' autoComplete='username' {...field} />
+                <Input
+                  placeholder='请输入手机号'
+                  autoComplete='username'
+                  className='h-11'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -99,22 +104,29 @@ export function UserAuthForm({
           control={form.control}
           name='password'
           render={({ field }) => (
-            <FormItem className='relative'>
-              <FormLabel>密码</FormLabel>
+            <FormItem className='space-y-2'>
+              <div className='flex items-center justify-between'>
+                <FormLabel>密码</FormLabel>
+                <Link
+                  to='/forgot-password'
+                  className='text-sm font-medium text-muted-foreground hover:opacity-75'
+                >
+                  忘记密码？
+                </Link>
+              </div>
               <FormControl>
-                <PasswordInput placeholder='请输入密码' autoComplete='current-password' {...field} />
+                <PasswordInput
+                  placeholder='请输入密码'
+                  autoComplete='current-password'
+                  className='h-11'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
-              <Link
-                to='/forgot-password'
-                className='absolute inset-e-0 -top-0.5 text-sm font-medium text-muted-foreground hover:opacity-75'
-              >
-                忘记密码？
-              </Link>
             </FormItem>
           )}
         />
-        <Button className='mt-1 h-11' disabled={isLoading}>
+        <Button className='mt-2 h-11' disabled={isLoading}>
           {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
           登录
         </Button>
