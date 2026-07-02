@@ -3,7 +3,9 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { createRole, updateRole } from '@/services/roles'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -46,6 +48,7 @@ type Props = {
 
 export function RolesActionDialog({ currentRow, open, onOpenChange }: Props) {
   const isEdit = !!currentRow
+  const queryClient = useQueryClient()
   const form = useForm<RoleForm>({
     resolver: zodResolver(formSchema),
     defaultValues: isEdit
@@ -58,14 +61,26 @@ export function RolesActionDialog({ currentRow, open, onOpenChange }: Props) {
       : { name: '', code: '', description: '', enabled: true },
   })
 
-  const onSubmit = (values: RoleForm) => {
-    form.reset()
-    showSubmittedData(
-      { ...values, status: values.enabled ? 'enabled' : 'disabled' },
-      isEdit ? '已更新角色：' : '已新增角色：'
-    )
-    onOpenChange(false)
-  }
+  const { mutate, isPending } = useMutation({
+    mutationFn: (values: RoleForm) => {
+      const payload = {
+        name: values.name,
+        code: values.code,
+        description: values.description,
+        status: (values.enabled ? 'enabled' : 'disabled') as Role['status'],
+      }
+      return isEdit ? updateRole(currentRow.id, payload) : createRole(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      toast.success(isEdit ? '角色已更新。' : '角色已创建。')
+      form.reset()
+      onOpenChange(false)
+    },
+    onError: () => toast.error('保存失败，请稍后重试。'),
+  })
+
+  const onSubmit = (values: RoleForm) => mutate(values)
 
   return (
     <Dialog
@@ -157,8 +172,8 @@ export function RolesActionDialog({ currentRow, open, onOpenChange }: Props) {
           </form>
         </Form>
         <DialogFooter>
-          <Button type='submit' form='role-form'>
-            保存
+          <Button type='submit' form='role-form' disabled={isPending}>
+            {isPending ? '保存中...' : '保存'}
           </Button>
         </DialogFooter>
       </DialogContent>

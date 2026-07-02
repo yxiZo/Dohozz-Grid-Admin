@@ -1,11 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getPermissions } from '@/services/permissions'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { updateRolePermissions } from '@/services/roles'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -38,9 +39,20 @@ export function RolesPermissionsDialog({
   open,
   onOpenChange,
 }: Props) {
+  const queryClient = useQueryClient()
   const { data: permissions = [] } = useQuery({
     queryKey: ['permissions'],
     queryFn: getPermissions,
+  })
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (ids: string[]) => updateRolePermissions(currentRow.id, ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      toast.success(`已保存「${currentRow.name}」的权限。`)
+      onOpenChange(false)
+    },
+    onError: () => toast.error('保存失败，请稍后重试。'),
   })
 
   const groups = useMemo(() => groupPermissions(permissions), [permissions])
@@ -69,16 +81,7 @@ export function RolesPermissionsDialog({
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id))
   const someChecked = allIds.some((id) => selected.has(id))
 
-  const handleSave = () => {
-    showSubmittedData(
-      {
-        role: currentRow.code,
-        permissions: Array.from(selected),
-      },
-      `已为角色「${currentRow.name}」保存权限：`
-    )
-    onOpenChange(false)
-  }
+  const handleSave = () => mutate(Array.from(selected))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,7 +197,9 @@ export function RolesPermissionsDialog({
           <Button variant='outline' onClick={() => onOpenChange(false)}>
             取消
           </Button>
-          <Button onClick={handleSave}>保存</Button>
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending ? '保存中...' : '保存'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,7 +1,9 @@
 'use client'
 
 import { AlertTriangle } from 'lucide-react'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { deleteRole } from '@/services/roles'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { type Role } from '../data/schema'
@@ -14,18 +16,26 @@ type Props = {
 
 export function RolesDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const hasUsers = currentRow.userCount > 0
+  const queryClient = useQueryClient()
 
-  const handleDelete = () => {
-    onOpenChange(false)
-    showSubmittedData(currentRow, '以下角色已被删除：')
-  }
+  const { mutate, isPending } = useMutation({
+    mutationFn: () => deleteRole(currentRow.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      toast.success(`角色「${currentRow.name}」已删除。`)
+      onOpenChange(false)
+    },
+    onError: () => toast.error('删除失败，请稍后重试。'),
+  })
+
+  const handleDelete = () => mutate()
 
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={handleDelete}
-      disabled={hasUsers}
+      disabled={hasUsers || isPending}
       title={
         <span className='text-destructive'>
           <AlertTriangle

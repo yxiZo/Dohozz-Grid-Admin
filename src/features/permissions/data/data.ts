@@ -43,3 +43,8 @@ export const modules = Object.entries(moduleMeta).map(([value, meta]) => ({
   value,
   label: meta.label,
 }))
+
+// 模块 key -> 中文名，供新增/编辑权限时回填 moduleName
+export const moduleNameMap: Record<string, string> = Object.fromEntries(
+  Object.entries(moduleMeta).map(([key, meta]) => [key, meta.label])
+)

@@ -3,7 +3,13 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import {
+  createPermission,
+  updatePermission,
+  type PermissionPayload,
+} from '@/services/permissions'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -51,6 +57,7 @@ export function PermissionsActionDialog({
   onOpenChange,
 }: Props) {
   const isEdit = !!currentRow
+  const queryClient = useQueryClient()
   const form = useForm<PermissionForm>({
     resolver: zodResolver(formSchema),
     defaultValues: isEdit
@@ -64,11 +71,23 @@ export function PermissionsActionDialog({
       : { name: '', code: '', module: '', type: '', description: '' },
   })
 
-  const onSubmit = (values: PermissionForm) => {
-    form.reset()
-    showSubmittedData(values, isEdit ? '已更新权限：' : '已新增权限：')
-    onOpenChange(false)
-  }
+  const { mutate, isPending } = useMutation({
+    mutationFn: (values: PermissionForm) => {
+      const payload = values as PermissionPayload
+      return isEdit
+        ? updatePermission(currentRow.id, payload)
+        : createPermission(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['permissions'] })
+      toast.success(isEdit ? '权限已更新。' : '权限已创建。')
+      form.reset()
+      onOpenChange(false)
+    },
+    onError: () => toast.error('保存失败，请稍后重试。'),
+  })
+
+  const onSubmit = (values: PermissionForm) => mutate(values)
 
   return (
     <Dialog
@@ -170,8 +189,8 @@ export function PermissionsActionDialog({
           </form>
         </Form>
         <DialogFooter>
-          <Button type='submit' form='permission-form'>
-            保存
+          <Button type='submit' form='permission-form' disabled={isPending}>
+            {isPending ? '保存中...' : '保存'}
           </Button>
         </DialogFooter>
       </DialogContent>
