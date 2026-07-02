@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { type Language } from '@/context/language-provider'
 import { cn } from '@/lib/utils'
@@ -12,15 +13,26 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useDashboardDict } from '../data/i18n'
 import {
+  brandOptions,
   formatKpiValue,
   getBdFunnel,
   getBdKpis,
+  getBdPerformanceMetrics,
   getBdTargets,
   getBdTasks,
   getBdTopCreators,
   getBdTrend,
+  seriesOptions,
+  type BdFilters,
   type TimePeriod,
 } from '../data/metrics'
 import { FunnelChart, TrendChart } from './dashboard-charts'
@@ -40,17 +52,96 @@ type Props = {
 
 export function BdDashboard({ bd, period, language }: Props) {
   const d = useDashboardDict(language)
-  const kpis = getBdKpis(bd, period)
-  const funnel = getBdFunnel(bd, period)
-  const tasks = getBdTasks(bd)
-  const creators = getBdTopCreators(bd)
-  const targets = getBdTargets(bd, period)
-  const trend = getBdTrend(bd, period, language)
+  const [series, setSeries] = useState('all')
+  const [brand, setBrand] = useState('all')
+
+  const allSeries = useMemo(() => seriesOptions(), [])
+  const allBrands = useMemo(() => brandOptions(), [])
+
+  // Only apply the filters that are visible for the active report period so
+  // hidden controls never silently skew the monthly view.
+  const filters: BdFilters =
+    period === 'day'
+      ? { series }
+      : period === 'week'
+        ? { series, brand }
+        : {}
+
+  const kpis = getBdKpis(bd, period, filters)
+  const perf = getBdPerformanceMetrics(bd, period, filters)
+  const funnel = getBdFunnel(bd, period, filters)
+  const tasks = getBdTasks(bd, filters)
+  const creators = getBdTopCreators(bd, filters)
+  const targets = getBdTargets(bd, period, filters)
+  const trend = getBdTrend(bd, period, language, filters)
+
+  const isMonth = period === 'month'
+  const scopeText =
+    period === 'day'
+      ? d('dailyScope')
+      : period === 'week'
+        ? d('weeklyScope')
+        : d('monthlyScope')
+  const reportLabel =
+    period === 'day'
+      ? d('dailyReport')
+      : period === 'week'
+        ? d('weeklyReport')
+        : d('monthlyReport')
 
   return (
     <div className='space-y-4'>
+      {/* Report scope + filters */}
+      <div className='flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between'>
+        <div className='flex items-center gap-2'>
+          <Badge variant='secondary' className='shrink-0'>
+            {reportLabel}
+          </Badge>
+          <p className='text-sm text-muted-foreground text-pretty'>
+            {scopeText}
+          </p>
+        </div>
+        {period !== 'month' && (
+          <div className='flex flex-wrap items-center gap-2'>
+            {period === 'week' && (
+              <Select value={brand} onValueChange={setBrand}>
+                <SelectTrigger className='h-9 w-[150px]' aria-label={d('brand')}>
+                  <SelectValue placeholder={d('brand')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>{d('allBrands')}</SelectItem>
+                  {allBrands.map((b) => (
+                    <SelectItem key={b} value={b}>
+                      {b}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={series} onValueChange={setSeries}>
+              <SelectTrigger className='h-9 w-[150px]' aria-label={d('series')}>
+                <SelectValue placeholder={d('series')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>{d('allSeries')}</SelectItem>
+                {allSeries.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
       {/* KPI row */}
-      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'>
+      <div
+        className={cn(
+          'grid gap-4 sm:grid-cols-2 lg:grid-cols-3',
+          isMonth ? 'xl:grid-cols-5' : 'lg:grid-cols-3'
+        )}
+      >
         {kpis.map((kpi) => (
           <KpiCard
             key={kpi.key}
@@ -61,6 +152,44 @@ export function BdDashboard({ bd, period, language }: Props) {
           />
         ))}
       </div>
+
+      {/* Monthly-only performance metrics */}
+      {isMonth && perf.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{d('performance')}</CardTitle>
+            <CardDescription>{d('performanceDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className='grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-7'>
+              {perf.map((m) => {
+                const up = m.delta >= 0
+                return (
+                  <div key={m.key} className='space-y-1'>
+                    <p className='text-xs text-muted-foreground'>
+                      {language === 'zh' ? m.labelZh : m.labelEn}
+                    </p>
+                    <p className='text-xl font-semibold tabular-nums'>
+                      {m.display}
+                    </p>
+                    <p
+                      className={cn(
+                        'text-xs tabular-nums',
+                        up
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-destructive'
+                      )}
+                    >
+                      {up ? '+' : ''}
+                      {m.delta}%
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trend + funnel */}
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>

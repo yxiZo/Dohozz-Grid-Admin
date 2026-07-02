@@ -110,7 +110,7 @@ export type Kpi = {
   labelZh: string
   labelEn: string
   value: number
-  format: 'int' | 'currency' | 'percent'
+  format: 'int' | 'currency' | 'percent' | 'compact'
   delta: number
   hintZh?: string
   hintEn?: string
@@ -123,6 +123,15 @@ export function formatKpiValue(value: number, format: Kpi['format']): string {
   if (format === 'percent') {
     return `${value.toFixed(1)}%`
   }
+  if (format === 'compact') {
+    return formatCompact(value)
+  }
+  return Math.round(value).toLocaleString('en-US')
+}
+
+function formatCompact(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
   return Math.round(value).toLocaleString('en-US')
 }
 
@@ -132,51 +141,110 @@ export function bdList(): string[] {
   return [...bdOptions]
 }
 
-export function getBdKpis(bd: string, period: TimePeriod): Kpi[] {
-  const outreach = creatorsByStage.outreach.filter((c) => c.bd === bd)
-  const samples = creatorsByStage.samples.filter((c) => c.bd === bd)
-  const videos = creatorsByStage.videos.filter((c) => c.bd === bd)
+// Filter options are derived from the live dataset so they always match the
+// underlying creator rows.
+export function seriesOptions(): string[] {
+  return Array.from(new Set(allStages.map((c) => c.series).filter(Boolean)))
+}
 
-  const monthlyOutreach = outreach.length * 6
-  const monthlySamples = samples.length * 6
-  const passedVideos =
-    videos.reduce((s, c) => s + c.completedVideos, 0) * 6
-  const gmv = videos.reduce((s, c) => s + c.gmv, 0)
-  const fulfilled =
-    videos.length > 0
-      ? (videos.reduce((s, c) => s + c.fulfilledRate, 0) / videos.length) * 100
-      : 0
+export function brandOptions(): string[] {
+  return Array.from(new Set(allStages.map((c) => c.brand).filter(Boolean)))
+}
+
+// Report filters. `series`/`brand` may be 'all' (or empty) to disable them.
+export type BdFilters = { series?: string; brand?: string }
+
+function matchesFilters(c: Creator, filters: BdFilters): boolean {
+  const seriesOk =
+    !filters.series || filters.series === 'all' || c.series === filters.series
+  const brandOk =
+    !filters.brand || filters.brand === 'all' || c.brand === filters.brand
+  return seriesOk && brandOk
+}
+
+function bdCreators(
+  stage: keyof typeof creatorsByStage,
+  bd: string,
+  filters: BdFilters
+): Creator[] {
+  return creatorsByStage[stage].filter(
+    (c) => c.bd === bd && matchesFilters(c, filters)
+  )
+}
+
+// Core "volume" KPIs common to every report period (daily / weekly / monthly).
+function bdVolumeKpis(
+  bd: string,
+  period: TimePeriod,
+  filters: BdFilters
+): Kpi[] {
+  const outreach = bdCreators('outreach', bd, filters)
+  const samples = bdCreators('samples', bd, filters)
+  const videos = bdCreators('videos', bd, filters)
+
+  const outreachCount = outreach.length * 6
+  const sampleCount = samples.length * 6
+  const publishedVideos = videos.reduce((s, c) => s + c.completedVideos, 0) * 6
 
   return [
     {
       key: 'outreach',
-      labelZh: '新增建联',
-      labelEn: 'New Outreach',
-      value: round(scale(monthlyOutreach, period)),
+      labelZh: '建联达人数',
+      labelEn: 'Creators Contacted',
+      value: round(scale(outreachCount, period)),
       format: 'int',
       delta: deltaFor(`${bd}-outreach-${period}`),
-      hintZh: '本期新建联达人数',
+      hintZh: '本期建联达人数量',
       hintEn: 'Creators contacted this period',
     },
     {
       key: 'samples',
-      labelZh: '寄样数',
-      labelEn: 'Samples Sent',
-      value: round(scale(monthlySamples, period)),
+      labelZh: '寄样达人数',
+      labelEn: 'Creators Sampled',
+      value: round(scale(sampleCount, period)),
       format: 'int',
       delta: deltaFor(`${bd}-samples-${period}`),
-      hintZh: '本期寄出样品数',
-      hintEn: 'Samples shipped this period',
+      hintZh: '本期寄样达人数量',
+      hintEn: 'Creators sampled this period',
     },
     {
       key: 'videos',
-      labelZh: '视频通过',
-      labelEn: 'Videos Accepted',
-      value: round(scale(passedVideos, period)),
+      labelZh: '视频发布数',
+      labelEn: 'Videos Published',
+      value: round(scale(publishedVideos, period)),
       format: 'int',
       delta: deltaFor(`${bd}-videos-${period}`),
-      hintZh: '本期验收通过视频数',
-      hintEn: 'Videos accepted this period',
+      hintZh: '本期发布视频数量',
+      hintEn: 'Videos published this period',
+    },
+  ]
+}
+
+// Primary KPI cards. Daily/weekly focus on the three volume metrics; monthly
+// additionally surfaces the "order videos" and GMV outcome cards.
+export function getBdKpis(
+  bd: string,
+  period: TimePeriod,
+  filters: BdFilters = {}
+): Kpi[] {
+  const base = bdVolumeKpis(bd, period, filters)
+  if (period !== 'month') return base
+
+  const videos = bdCreators('videos', bd, filters)
+  const orderVideos = videos.filter((c) => c.hasSales === '是').length * 6
+  const gmv = videos.reduce((s, c) => s + c.gmv, 0)
+
+  return [
+    ...base,
+    {
+      key: 'order-videos',
+      labelZh: '出单视频数',
+      labelEn: 'Converting Videos',
+      value: round(scale(orderVideos, period)),
+      format: 'int',
+      delta: deltaFor(`${bd}-ordervideos-${period}`),
+      hintZh: '本月带来成交的视频数',
+      hintEn: 'Videos that drove sales this month',
     },
     {
       key: 'gmv',
@@ -185,18 +253,100 @@ export function getBdKpis(bd: string, period: TimePeriod): Kpi[] {
       value: roundGmv(scale(gmv, period)),
       format: 'currency',
       delta: deltaFor(`${bd}-gmv-${period}`),
-      hintZh: '本期带货成交额',
-      hintEn: 'Attributed sales this period',
+      hintZh: '本月带货成交额',
+      hintEn: 'Attributed sales this month',
+    },
+  ]
+}
+
+// Monthly-only performance metrics (履约率 / 出单率 / 成交件数 / 曝光量 /
+// 互动量 / 互动率 / 寄样指标完成度). Returns [] for daily / weekly.
+export type PerfMetric = {
+  key: string
+  labelZh: string
+  labelEn: string
+  display: string
+  delta: number
+}
+
+const MONTHLY_SAMPLE_TARGET = 40
+
+export function getBdPerformanceMetrics(
+  bd: string,
+  period: TimePeriod,
+  filters: BdFilters = {}
+): PerfMetric[] {
+  if (period !== 'month') return []
+
+  const samples = bdCreators('samples', bd, filters)
+  const videos = bdCreators('videos', bd, filters)
+  const videoCount = videos.length || 1
+
+  const fulfilled =
+    (videos.reduce((s, c) => s + c.fulfilledRate, 0) / videoCount) * 100
+  const orderRate =
+    (videos.filter((c) => c.hasSales === '是').length / videoCount) * 100
+  const dealPieces = videos.reduce((s, c) => s + c.dealPieces, 0) * 6
+  const exposure =
+    videos.reduce((s, c) => s + c.productExposuresCumulative, 0) * 6
+  const interactions =
+    videos.reduce((s, c) => s + c.cumulativeInteractions, 0) * 6
+  const interactionRate =
+    (videos.reduce((s, c) => s + c.interactionRate, 0) / videoCount) * 100
+  const sampleCompletion = Math.min(
+    100,
+    ((samples.length * 6) / MONTHLY_SAMPLE_TARGET) * 100
+  )
+
+  return [
+    {
+      key: 'order-rate',
+      labelZh: '出单率',
+      labelEn: 'Order Rate',
+      display: `${orderRate.toFixed(1)}%`,
+      delta: deltaFor(`${bd}-orderrate`),
     },
     {
       key: 'fulfilled',
       labelZh: '履约率',
-      labelEn: 'Fulfillment Rate',
-      value: fulfilled,
-      format: 'percent',
-      delta: deltaFor(`${bd}-fulfilled-${period}`),
-      hintZh: '约定视频完成比例',
-      hintEn: 'Agreed videos delivered',
+      labelEn: 'Fulfillment',
+      display: `${fulfilled.toFixed(1)}%`,
+      delta: deltaFor(`${bd}-fulfilled`),
+    },
+    {
+      key: 'deal-pieces',
+      labelZh: '成交件数',
+      labelEn: 'Units Sold',
+      display: formatCompact(dealPieces),
+      delta: deltaFor(`${bd}-deals`),
+    },
+    {
+      key: 'exposure',
+      labelZh: '曝光量',
+      labelEn: 'Impressions',
+      display: formatCompact(exposure),
+      delta: deltaFor(`${bd}-exposure`),
+    },
+    {
+      key: 'interactions',
+      labelZh: '互动量',
+      labelEn: 'Interactions',
+      display: formatCompact(interactions),
+      delta: deltaFor(`${bd}-interactions`),
+    },
+    {
+      key: 'interaction-rate',
+      labelZh: '互动率',
+      labelEn: 'Interaction Rate',
+      display: `${interactionRate.toFixed(1)}%`,
+      delta: deltaFor(`${bd}-intrate`),
+    },
+    {
+      key: 'sample-completion',
+      labelZh: '寄样指标完成度',
+      labelEn: 'Sample Target',
+      display: `${sampleCompletion.toFixed(0)}%`,
+      delta: deltaFor(`${bd}-samplecomp`),
     },
   ]
 }
@@ -240,8 +390,12 @@ function buildFunnel(seedKey: string, top: number, period: TimePeriod): FunnelSt
   ]
 }
 
-export function getBdFunnel(bd: string, period: TimePeriod): FunnelStage[] {
-  const built = creatorsByStage.outreach.filter((c) => c.bd === bd).length * 6
+export function getBdFunnel(
+  bd: string,
+  period: TimePeriod,
+  filters: BdFilters = {}
+): FunnelStage[] {
+  const built = bdCreators('outreach', bd, filters).length * 6
   return buildFunnel(`funnel-${bd}`, built, period)
 }
 
@@ -253,10 +407,10 @@ export type BdTask = {
   tone: 'default' | 'warning' | 'danger'
 }
 
-export function getBdTasks(bd: string): BdTask[] {
-  const outreach = creatorsByStage.outreach.filter((c) => c.bd === bd)
-  const samples = creatorsByStage.samples.filter((c) => c.bd === bd)
-  const videos = creatorsByStage.videos.filter((c) => c.bd === bd)
+export function getBdTasks(bd: string, filters: BdFilters = {}): BdTask[] {
+  const outreach = bdCreators('outreach', bd, filters)
+  const samples = bdCreators('samples', bd, filters)
+  const videos = bdCreators('videos', bd, filters)
 
   return [
     {
@@ -299,9 +453,12 @@ export type CreatorRow = {
   status: string
 }
 
-export function getBdTopCreators(bd: string, limit = 5): CreatorRow[] {
-  return creatorsByStage.videos
-    .filter((c) => c.bd === bd)
+export function getBdTopCreators(
+  bd: string,
+  filters: BdFilters = {},
+  limit = 5
+): CreatorRow[] {
+  return bdCreators('videos', bd, filters)
     .sort((a, b) => b.gmv - a.gmv)
     .slice(0, limit)
     .map((c) => ({
@@ -322,11 +479,15 @@ export type TargetProgress = {
   format: Kpi['format']
 }
 
-export function getBdTargets(bd: string, period: TimePeriod): TargetProgress[] {
-  const videos = creatorsByStage.videos.filter((c) => c.bd === bd)
+export function getBdTargets(
+  bd: string,
+  period: TimePeriod,
+  filters: BdFilters = {}
+): TargetProgress[] {
+  const videos = bdCreators('videos', bd, filters)
   const gmv = roundGmv(scale(videos.reduce((s, c) => s + c.gmv, 0), period))
   const outreach = round(
-    scale(creatorsByStage.outreach.filter((c) => c.bd === bd).length * 6, period)
+    scale(bdCreators('outreach', bd, filters).length * 6, period)
   )
   const gmvTarget = period === 'month' ? 120000 : period === 'week' ? 30000 : 6000
   const outreachTarget = period === 'month' ? 60 : period === 'week' ? 15 : 4
@@ -378,14 +539,12 @@ function buildTrend(
 export function getBdTrend(
   bd: string,
   period: TimePeriod,
-  lang: 'zh' | 'en'
+  lang: 'zh' | 'en',
+  filters: BdFilters = {}
 ): TrendPoint[] {
-  const videos = creatorsByStage.videos.filter((c) => c.bd === bd)
+  const videos = bdCreators('videos', bd, filters)
   const gmv = scale(videos.reduce((s, c) => s + c.gmv, 0), period)
-  const outreach = scale(
-    creatorsByStage.outreach.filter((c) => c.bd === bd).length * 6,
-    period
-  )
+  const outreach = scale(bdCreators('outreach', bd, filters).length * 6, period)
   return buildTrend(`bd-${bd}`, period, lang, gmv, outreach)
 }
 
