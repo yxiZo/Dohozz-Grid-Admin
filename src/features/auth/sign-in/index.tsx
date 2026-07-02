@@ -14,16 +14,16 @@ export function SignIn() {
 
   return (
     <AuthLayout>
-      <Card className='w-[min(100%,26rem)] gap-8 py-10'>
-        <CardHeader className='gap-2.5 px-10 text-center'>
+      <Card className='w-[min(100%,30rem)] gap-8 py-10'>
+        <CardHeader className='gap-2 px-8 text-center'>
           <CardTitle className='text-2xl font-semibold tracking-tight'>
             登录
           </CardTitle>
-          <CardDescription className='leading-6 text-balance'>
+          <CardDescription className='leading-6'>
             使用手机号和密码登录后台管理系统。
           </CardDescription>
         </CardHeader>
-        <CardContent className='px-10'>
+        <CardContent className='px-8'>
           <UserAuthForm redirectTo={redirect} />
         </CardContent>
       </Card>
