@@ -14,3 +14,12 @@ export { IconTelegram } from './icon-telegram'
 export { IconTrello } from './icon-trello'
 export { IconWhatsapp } from './icon-whatsapp'
 export { IconZoom } from './icon-zoom'
+
+// Colored third-party platform logos (TikTok, Shopee, Lazada, etc.).
+// Use these for platform branding; use lucide-react for everyday UI icons.
+export {
+  PlatformLogo,
+  PLATFORMS,
+  platformLabel,
+  type Platform,
+} from './platform-logo'
