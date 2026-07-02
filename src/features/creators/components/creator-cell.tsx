@@ -40,7 +40,7 @@ function InfoRow({
   return (
     <div className='flex items-center gap-2 text-sm'>
       {platform ? (
-        <PlatformLogo platform={platform} size={14} className='shrink-0' />
+        <PlatformLogo platform={platform} size={22} variant='chip' />
       ) : Icon ? (
         <Icon className='text-muted-foreground size-3.5 shrink-0' />
       ) : null}
