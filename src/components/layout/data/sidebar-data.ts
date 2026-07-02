@@ -7,6 +7,9 @@ import {
   AudioWaveform,
   Command,
   GalleryVerticalEnd,
+  Users,
+  Shield,
+  KeyRound,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -66,6 +69,26 @@ export const sidebarData: SidebarData = {
           title: '视频验收',
           url: '/creators/videos',
           icon: Clapperboard,
+        },
+      ],
+    },
+    {
+      title: '系统管理',
+      items: [
+        {
+          title: '用户管理',
+          url: '/users',
+          icon: Users,
+        },
+        {
+          title: '角色管理',
+          url: '/system/roles',
+          icon: Shield,
+        },
+        {
+          title: '权限管理',
+          url: '/system/permissions',
+          icon: KeyRound,
         },
       ],
     },
