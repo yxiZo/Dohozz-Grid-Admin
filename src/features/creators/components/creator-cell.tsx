@@ -1,13 +1,6 @@
 import { type ICellRendererParams } from 'ag-grid-community'
-import {
-  Users,
-  Mail,
-  MessageCircle,
-  AtSign,
-  Share2,
-  TrendingUp,
-  Pencil,
-} from 'lucide-react'
+import { Users, Mail, TrendingUp, Pencil } from 'lucide-react'
+import { PlatformLogo, type Platform } from '@/assets/brand-icons'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -34,17 +27,23 @@ function formatFollower(n: number) {
 
 function InfoRow({
   icon: Icon,
+  platform,
   label,
   value,
 }: {
-  icon: React.ComponentType<{ className?: string }>
+  icon?: React.ComponentType<{ className?: string }>
+  platform?: Platform
   label: string
   value: string
 }) {
   if (!value) return null
   return (
     <div className='flex items-center gap-2 text-sm'>
-      <Icon className='text-muted-foreground size-3.5 shrink-0' />
+      {platform ? (
+        <PlatformLogo platform={platform} size={22} variant='chip' />
+      ) : Icon ? (
+        <Icon className='text-muted-foreground size-3.5 shrink-0' />
+      ) : null}
       <span className='text-muted-foreground w-20 shrink-0'>{label}</span>
       <span className='truncate'>{value}</span>
     </div>
@@ -124,14 +123,23 @@ export function CreatorCellRenderer(params: ICellRendererParams<Creator>) {
 
         <div className='flex flex-col gap-1.5'>
           <InfoRow icon={TrendingUp} label='合作类型' value={creator.collabType} />
+          <InfoRow platform='tiktok' label='TikTok' value={creator.tiktokId} />
           <InfoRow icon={Mail} label='Email' value={creator.email} />
           <InfoRow
-            icon={MessageCircle}
+            platform='whatsapp'
             label='Whatsapp'
             value={creator.whatsapp}
           />
-          <InfoRow icon={AtSign} label='Instagram' value={creator.instagram} />
-          <InfoRow icon={Share2} label='Facebook' value={creator.facebook} />
+          <InfoRow
+            platform='instagram'
+            label='Instagram'
+            value={creator.instagram}
+          />
+          <InfoRow
+            platform='facebook'
+            label='Facebook'
+            value={creator.facebook}
+          />
         </div>
 
         <button
