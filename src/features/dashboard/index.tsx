@@ -65,7 +65,7 @@ export function Dashboard() {
         <ProfileDropdown />
       </Header>
 
-      <Main>
+      <Main fluid>
         {/* Title + controls */}
         <div className='mb-4 flex flex-col gap-4'>
           <div className='flex flex-wrap items-center justify-between gap-3'>
