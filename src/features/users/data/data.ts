@@ -11,24 +11,32 @@ export const callTypes = new Map<UserStatus, string>([
   ],
 ])
 
+// 状态中文标签
+export const statusLabels = new Map<UserStatus, string>([
+  ['active', '正常'],
+  ['inactive', '未激活'],
+  ['invited', '已邀请'],
+  ['suspended', '已停用'],
+])
+
 export const roles = [
   {
-    label: 'Superadmin',
+    label: '超级管理员',
     value: 'superadmin',
     icon: Shield,
   },
   {
-    label: 'Admin',
+    label: '管理员',
     value: 'admin',
     icon: UserCheck,
   },
   {
-    label: 'Manager',
+    label: '运营经理',
     value: 'manager',
     icon: Users,
   },
   {
-    label: 'Cashier',
+    label: '运营专员',
     value: 'cashier',
     icon: CreditCard,
   },
