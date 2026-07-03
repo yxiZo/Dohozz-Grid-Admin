@@ -350,7 +350,7 @@ function daysFromNow(offset: number) {
   return d.toISOString().slice(0, 10)
 }
 
-function seededCreators(stage: CreatorStage, count: number): Creator[] {
+export function seededCreators(stage: CreatorStage, count: number): Creator[] {
   return Array.from({ length: count }).map((_, i) => {
     const handle = handles[i % handles.length]
     const follower = Math.round((Math.random() * 1_500_000 + 5000) / 100) * 100

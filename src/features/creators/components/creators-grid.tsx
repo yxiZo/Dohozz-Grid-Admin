@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -17,6 +10,8 @@ import {
   type GetContextMenuItemsParams,
   type GridApi,
   type GridReadyEvent,
+  type IDatasource,
+  type IGetRowsParams,
   type MenuItemDef,
 } from 'ag-grid-community'
 import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise'
@@ -27,6 +22,13 @@ import {
   type CreatorStage,
   createBlankCreator,
 } from '../data/data'
+import {
+  PAGE_SIZE,
+  deleteCreators,
+  fetchCreators,
+  getRowCount,
+  upsertCreator,
+} from '../data/mock-server'
 import { columnsByStage } from '../grid/columns'
 import { type CreatorGridContext } from './creator-cell'
 import { CreatorEditDialog } from './creator-edit-dialog'
@@ -40,15 +42,43 @@ const darkTheme = themeQuartz.withPart(colorSchemeDark)
 
 type CreatorsGridProps = {
   stage: CreatorStage
-  rows: Creator[]
-  setRows: Dispatch<SetStateAction<Creator[]>>
 }
 
-export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
+export function CreatorsGrid({ stage }: CreatorsGridProps) {
   const { resolvedTheme } = useTheme()
   const gridApiRef = useRef<GridApi<Creator> | null>(null)
   const [editing, setEditing] = useState<Creator | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [rowCount, setRowCount] = useState(() => getRowCount(stage))
+
+  // Infinite Row Model datasource: the grid calls getRows for each block and we
+  // resolve it from the mock backend (server-side sort/filter/pagination).
+  const datasource = useMemo<IDatasource>(
+    () => ({
+      getRows: (params: IGetRowsParams) => {
+        fetchCreators({
+          stage,
+          startRow: params.startRow,
+          endRow: params.endRow,
+          sortModel: params.sortModel,
+          filterModel: params.filterModel,
+        })
+          .then(({ rows, rowCount: total }) => {
+            // lastRow lets the grid know the total size so it can stop paging.
+            const lastRow = params.endRow >= total ? total : undefined
+            params.successCallback(rows, lastRow)
+            setRowCount(total)
+          })
+          .catch(() => params.failCallback())
+      },
+    }),
+    [stage]
+  )
+
+  const refreshGrid = useCallback(() => {
+    gridApiRef.current?.refreshInfiniteCache()
+    setRowCount(getRowCount(stage))
+  }, [stage])
 
   const onGridReady = useCallback((e: GridReadyEvent<Creator>) => {
     gridApiRef.current = e.api
@@ -70,13 +100,10 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
 
   const saveCreator = useCallback(
     (updated: Creator) => {
-      setRows((prev) => {
-        const exists = prev.some((row) => row.id === updated.id)
-        if (!exists) return [{ ...updated }, ...prev]
-        return prev.map((row) => (row.id === updated.id ? { ...updated } : row))
-      })
+      upsertCreator(stage, updated)
+      refreshGrid()
     },
-    [setRows]
+    [refreshGrid, stage]
   )
 
   const columnDefs = useMemo<ColDef<Creator>[]>(
@@ -95,32 +122,11 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
     []
   )
 
-  const autoGroupColumnDef = useMemo<ColDef<Creator>>(
-    () => ({
-      headerName: '分组',
-      minWidth: 220,
-      cellRendererParams: { suppressCount: false },
-    }),
-    []
-  )
-
-  const sideBar = useMemo(
-    () => ({ toolPanels: ['columns', 'filters'], defaultToolPanel: '' }),
-    []
-  )
-
   const statusBar = useMemo(
     () => ({
       statusPanels: [
-        { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
+        { statusPanel: 'agTotalRowCountComponent', align: 'left' },
         { statusPanel: 'agSelectedRowCountComponent', align: 'center' },
-        {
-          statusPanel: 'agAggregationComponent',
-          align: 'right',
-          statusPanelParams: {
-            aggFuncs: ['count', 'sum', 'avg', 'min', 'max'],
-          },
-        },
       ],
     }),
     []
@@ -133,12 +139,10 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
 
   const onCellValueChanged = useCallback(
     (e: CellValueChangedEvent<Creator>) => {
-      const updated = e.data
-      setRows((prev) =>
-        prev.map((row) => (row.id === updated.id ? { ...updated } : row))
-      )
+      // Persist inline edits back to the mock backend.
+      if (e.data) upsertCreator(stage, e.data)
     },
-    [setRows]
+    [stage]
   )
 
   const getRangeRowIds = useCallback((): string[] => {
@@ -173,11 +177,11 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
   const deleteRowsByIds = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return
-      const idSet = new Set(ids)
-      setRows((prev) => prev.filter((row) => !idSet.has(row.id)))
+      deleteCreators(stage, ids)
       gridApiRef.current?.deselectAll()
+      refreshGrid()
     },
-    [setRows]
+    [refreshGrid, stage]
   )
 
   const deleteSelected = useCallback(() => {
@@ -232,7 +236,7 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
   return (
     <div className='flex flex-1 flex-col gap-3'>
       <CreatorGridToolbar
-        rowCount={rows.length}
+        rowCount={rowCount}
         onAdd={addRow}
         onDeleteSelected={deleteSelected}
         onExport={exportCsv}
@@ -241,26 +245,28 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
       <div className='min-h-0 flex-1'>
         <AgGridReact<Creator>
           theme={resolvedTheme === 'dark' ? darkTheme : baseTheme}
-          rowData={rows}
+          rowModelType='infinite'
+          datasource={datasource}
+          cacheBlockSize={PAGE_SIZE}
+          cacheOverflowSize={1}
+          maxConcurrentDatasourceRequests={1}
+          infiniteInitialRowCount={PAGE_SIZE}
+          pagination
+          paginationPageSize={PAGE_SIZE}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
-          autoGroupColumnDef={autoGroupColumnDef}
           context={gridContext}
           getRowId={getRowId}
           onGridReady={onGridReady}
           onCellValueChanged={onCellValueChanged}
           cellSelection={{ handle: { mode: 'range' } }}
           getContextMenuItems={getContextMenuItems}
-          sideBar={sideBar}
           statusBar={statusBar}
           rowSelection={{
             mode: 'multiRow',
             enableClickSelection: true,
             enableSelectionWithoutKeys: true,
           }}
-          rowGroupPanelShow='always'
-          enableCharts
-          groupDefaultExpanded={1}
           stopEditingWhenCellsLoseFocus
           animateRows
           rowHeight={48}
