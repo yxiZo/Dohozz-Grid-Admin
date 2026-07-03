@@ -28,7 +28,6 @@ import {
   deleteCreators,
   fetchCreators,
   getRowCount,
-  selectCreators,
   updateCreatorField,
   upsertCreator,
 } from '../data/mock-server'
@@ -122,15 +121,6 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
     setRowCount(getRowCount(stage))
     setDataVersion((v) => v + 1)
   }, [stage])
-
-  // Rows for the Kanban board: read synchronously from the mock store and
-  // re-computed whenever the stage, filters, or data version change.
-  const kanbanRows = useMemo(
-    () => selectCreators({ stage, search: filters.search, filterModel: externalFilterModel }),
-    // dataVersion intentionally invalidates this memo after mutations.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stage, filters.search, externalFilterModel, dataVersion]
-  )
 
   const onFiltersChange = useCallback(
     (next: FilterState) => {
@@ -308,9 +298,9 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
   )
 
   return (
-    <div className='flex flex-1 flex-col gap-3'>
+    <div className='flex min-h-0 flex-1 flex-col gap-3'>
       <CreatorGridToolbar
-        rowCount={view === 'kanban' ? kanbanRows.length : rowCount}
+        rowCount={rowCount}
         view={view}
         onViewChange={setView}
         onAdd={addRow}
@@ -324,7 +314,9 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
         <div className='flex min-h-0 flex-1'>
           <CreatorKanban
             stage={stage}
-            rows={kanbanRows}
+            search={filters.search}
+            filterModel={externalFilterModel}
+            refreshKey={dataVersion}
             onEditCreator={onEditCreator}
             onStatusChange={onStatusChange}
           />
