@@ -72,7 +72,7 @@ export function UsersTeamScopesDialog({ currentRow, open, onOpenChange }: Props)
     queryFn: getTeams,
   })
 
-  const { data: scopes = [], isLoading } = useQuery({
+  const { data: scopes, isLoading } = useQuery({
     queryKey: ['employee-team-scopes', currentRow.id],
     queryFn: () => getEmployeeTeamScopes(currentRow.id),
     enabled: open,
@@ -80,9 +80,9 @@ export function UsersTeamScopesDialog({ currentRow, open, onOpenChange }: Props)
 
   const [rows, setRows] = useState<ScopeRow[]>([])
 
-  // 每次打开或数据变化时，用服务端返回的范围初始化编辑行。
+  // 数据加载完成后（引用稳定），用服务端返回的范围初始化编辑行。
   useEffect(() => {
-    if (!open) return
+    if (!open || !scopes) return
     setRows(
       scopes.map((s) => ({
         key: newKey(),
