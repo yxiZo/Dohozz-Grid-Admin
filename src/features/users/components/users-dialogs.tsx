@@ -2,6 +2,7 @@ import { UsersActionDialog } from './users-action-dialog'
 import { UsersDeleteDialog } from './users-delete-dialog'
 import { UsersInviteDialog } from './users-invite-dialog'
 import { useUsers } from './users-provider'
+import { UsersTeamScopesDialog } from './users-team-scopes-dialog'
 
 export function UsersDialogs() {
   const { open, setOpen, currentRow, setCurrentRow } = useUsers()
@@ -38,6 +39,18 @@ export function UsersDialogs() {
             open={open === 'delete'}
             onOpenChange={() => {
               setOpen('delete')
+              setTimeout(() => {
+                setCurrentRow(null)
+              }, 500)
+            }}
+            currentRow={currentRow}
+          />
+
+          <UsersTeamScopesDialog
+            key={`user-team-scopes-${currentRow.id}`}
+            open={open === 'team-scopes'}
+            onOpenChange={() => {
+              setOpen('team-scopes')
               setTimeout(() => {
                 setCurrentRow(null)
               }, 500)

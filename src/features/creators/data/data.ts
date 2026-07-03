@@ -11,6 +11,10 @@ export type WorkingStatus = '未开始' | '沟通中' | '已合作' | '已终止
 
 export type Creator = {
   id: string
+  /** 所属团队 team_id（业务数据必填） */
+  teamId: number | null
+  /** 所属国家 country_id（业务数据必填，不能为 null） */
+  countryId: number | null
   /** 查重 */
   dedup: DedupStatus
   /** Tiktok ID */
@@ -259,6 +263,8 @@ export function createBlankCreator(stage: CreatorStage): Creator {
 
   return {
     id,
+    teamId: null,
+    countryId: null,
     dedup: '未查重',
     tiktokId: '',
     series: '',
@@ -371,8 +377,19 @@ function seededCreators(stage: CreatorStage, count: number): Creator[] {
         : Math.max(0, i % 2)
     const review: ReviewStatus =
       i % 5 === 0 ? '未通过' : i % 3 === 0 ? '待审核' : '已通过'
+    // 团队与国家：从各团队覆盖的国家里取一个（业务数据 country_id 不能为 null）。
+    const teamId = (i % 3) + 1
+    const teamCountryIds: Record<number, number[]> = {
+      1: [1, 3],
+      2: [4, 3],
+      3: [2, 5, 6],
+    }
+    const teamCountries = teamCountryIds[teamId]
+    const countryId = teamCountries[i % teamCountries.length]
     return {
       id: `${stage}-${makeId(i)}`,
+      teamId,
+      countryId,
       dedup: i % 6 === 0 ? '重复' : i % 2 === 0 ? '通过' : '未查重',
       tiktokId: `@${handle}`,
       series: seriesList[i % seriesList.length],

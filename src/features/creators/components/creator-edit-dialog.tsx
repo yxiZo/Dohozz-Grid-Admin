@@ -1,4 +1,11 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { getTeams } from '@/services/teams'
+import {
+  CountrySelect,
+  TeamSelect,
+} from '@/features/teams/components/team-country-select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -100,7 +107,15 @@ export function CreatorEditDialog({
     cloneCreator(creator)
   )
 
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: getTeams,
+    enabled: open,
+  })
+
   if (!draft) return null
+
+  const selectedTeam = teams.find((t) => t.id === draft.teamId) ?? null
 
   const set = <K extends keyof Creator>(key: K, value: Creator[K]) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev))
@@ -175,6 +190,14 @@ export function CreatorEditDialog({
   )
 
   const handleSave = () => {
+    if (draft.teamId == null) {
+      toast.error('请选择所属团队。')
+      return
+    }
+    if (draft.countryId == null) {
+      toast.error('请选择所属国家。')
+      return
+    }
     onSave(draft)
     onOpenChange(false)
   }
@@ -182,6 +205,24 @@ export function CreatorEditDialog({
   const renderIdentitySection = () => (
     <>
       <SectionTitle>基础信息</SectionTitle>
+      <FormField label='所属团队'>
+        <TeamSelect
+          teams={teams}
+          value={draft.teamId}
+          onChange={(teamId) =>
+            setDraft((prev) =>
+              prev ? { ...prev, teamId, countryId: null } : prev
+            )
+          }
+        />
+      </FormField>
+      <FormField label='所属国家'>
+        <CountrySelect
+          team={selectedTeam}
+          value={draft.countryId}
+          onChange={(countryId) => set('countryId', countryId)}
+        />
+      </FormField>
       {renderTextField('tiktokId', 'Tiktok ID')}
       {renderTextField('series', 'Series')}
       {renderTextField('profile', 'Profile', 'url')}
