@@ -16,13 +16,17 @@ import {
 import {
   baseCreatorColumn,
   comboColumn,
+  countryColumn,
   dateColumn,
   moneyColumn,
   numberColumn,
+  teamColumn,
 } from './column-helpers'
 
 export const outreachColumns: ColDef<Creator>[] = [
   baseCreatorColumn,
+  teamColumn,
+  countryColumn,
   { field: 'series', headerName: 'Series', width: 120, enableRowGroup: true },
   {
     field: 'review',

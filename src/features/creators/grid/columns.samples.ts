@@ -10,9 +10,11 @@ import {
 import {
   baseCreatorColumn,
   comboColumn,
+  countryColumn,
   dateColumn,
   moneyColumn,
   percentFormatter,
+  teamColumn,
 } from './column-helpers'
 
 export const sampleColumns: ColDef<Creator>[] = [
@@ -23,6 +25,8 @@ export const sampleColumns: ColDef<Creator>[] = [
     pinned: 'left',
   },
   baseCreatorColumn,
+  teamColumn,
+  countryColumn,
   {
     field: 'bd',
     headerName: 'BD',

@@ -13,11 +13,13 @@ import {
 import {
   baseCreatorColumn,
   comboColumn,
+  countryColumn,
   dateColumn,
   moneyColumn,
   numberColumn,
   numberFormatter,
   percentFormatter,
+  teamColumn,
 } from './column-helpers'
 
 export const videoColumns: ColDef<Creator>[] = [
@@ -28,6 +30,8 @@ export const videoColumns: ColDef<Creator>[] = [
     pinned: 'left',
     ...dateColumn(),
   },
+  teamColumn,
+  countryColumn,
   {
     field: 'dateVideoPost',
     headerName: 'Date Video Post（填表日期）',
