@@ -38,11 +38,16 @@ import {
   type FilterState,
   kanbanConfigByStage,
 } from '../grid/view-config'
+import { useReviewPermission } from '../hooks/use-review-permission'
 import { type CreatorGridContext } from './creator-cell'
 import { CreatorEditDialog } from './creator-edit-dialog'
 import { CreatorFilterBar } from './creator-filter-bar'
 import { CreatorGridToolbar, type CreatorView } from './creator-grid-toolbar'
 import { CreatorKanban } from './creator-kanban'
+import {
+  CreatorReviewDialog,
+  type ReviewDecision,
+} from './creator-review-dialog'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
 LicenseManager.setLicenseKey(import.meta.env.VITE_AG_GRID_LICENSE_KEY ?? '')
@@ -56,9 +61,12 @@ type CreatorsGridProps = {
 
 export function CreatorsGrid({ stage }: CreatorsGridProps) {
   const { resolvedTheme } = useTheme()
+  const { canReview } = useReviewPermission()
   const gridApiRef = useRef<GridApi<Creator> | null>(null)
   const [editing, setEditing] = useState<Creator | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [reviewing, setReviewing] = useState<Creator | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [rowCount, setRowCount] = useState(() => getRowCount(stage))
   const [view, setView] = useState<CreatorView>('table')
   const [filters, setFilters] = useState<FilterState>(emptyFilterState)
@@ -157,14 +165,40 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
     onEditCreator(createBlankCreator(stage))
   }, [onEditCreator, stage])
 
+  const onReviewCreator = useCallback(
+    (creator: Creator) => {
+      if (!canReview) return
+      setReviewing({ ...creator })
+      setReviewOpen(true)
+    },
+    [canReview]
+  )
+
   const gridContext = useMemo<CreatorGridContext>(
-    () => ({ onEditCreator }),
-    [onEditCreator]
+    () => ({
+      onEditCreator,
+      // Review is only available on the outreach stage and for permitted users.
+      onReviewCreator: stage === 'outreach' ? onReviewCreator : undefined,
+      canReview: stage === 'outreach' && canReview,
+    }),
+    [onEditCreator, onReviewCreator, canReview, stage]
   )
 
   const saveCreator = useCallback(
     (updated: Creator) => {
       upsertCreator(stage, updated)
+      refreshGrid()
+    },
+    [refreshGrid, stage]
+  )
+
+  const saveReview = useCallback(
+    (creator: Creator, decision: ReviewDecision) => {
+      upsertCreator(stage, {
+        ...creator,
+        review: decision.review,
+        notApprovalReason: decision.notApprovalReason,
+      })
       refreshGrid()
     },
     [refreshGrid, stage]
@@ -265,7 +299,22 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
       const idsToDelete =
         selectedIds.length > 0 ? selectedIds : clickedId ? [clickedId] : []
 
+      const reviewItems: (DefaultMenuItem | MenuItemDef)[] =
+        stage === 'outreach' && canReview
+          ? [
+              {
+                name: '提报审核',
+                disabled: !params.node?.data,
+                action: () => {
+                  if (params.node?.data) onReviewCreator(params.node.data)
+                },
+              },
+              'separator',
+            ]
+          : []
+
       return [
+        ...reviewItems,
         {
           name: '编辑达人信息',
           disabled: !params.node?.data,
@@ -294,7 +343,15 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
         'export',
       ]
     },
-    [addRow, deleteRowsByIds, getSelectedRowIds, onEditCreator]
+    [
+      addRow,
+      deleteRowsByIds,
+      getSelectedRowIds,
+      onEditCreator,
+      onReviewCreator,
+      canReview,
+      stage,
+    ]
   )
 
   return (
@@ -360,6 +417,14 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSave={saveCreator}
+      />
+
+      <CreatorReviewDialog
+        key={`${reviewing?.id ?? 'empty'}-${reviewOpen ? 'open' : 'closed'}`}
+        creator={reviewing}
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        onConfirm={saveReview}
       />
     </div>
   )
