@@ -248,11 +248,9 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
           rowModelType='infinite'
           datasource={datasource}
           cacheBlockSize={PAGE_SIZE}
-          cacheOverflowSize={1}
+          cacheOverflowSize={2}
           maxConcurrentDatasourceRequests={1}
           infiniteInitialRowCount={PAGE_SIZE}
-          pagination
-          paginationPageSize={PAGE_SIZE}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           context={gridContext}
