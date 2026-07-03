@@ -24,15 +24,26 @@ import {
 } from '../data/data'
 import {
   PAGE_SIZE,
+  type AnyFilter,
   deleteCreators,
   fetchCreators,
   getRowCount,
+  selectCreators,
+  updateCreatorField,
   upsertCreator,
 } from '../data/mock-server'
 import { columnsByStage } from '../grid/columns'
+import { kanbanConfigByStage } from '../grid/view-config'
 import { type CreatorGridContext } from './creator-cell'
 import { CreatorEditDialog } from './creator-edit-dialog'
-import { CreatorGridToolbar } from './creator-grid-toolbar'
+import {
+  ALL_VALUE,
+  CreatorFilterBar,
+  emptyFilterState,
+  type FilterState,
+} from './creator-filter-bar'
+import { CreatorGridToolbar, type CreatorView } from './creator-grid-toolbar'
+import { CreatorKanban } from './creator-kanban'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
 LicenseManager.setLicenseKey(import.meta.env.VITE_AG_GRID_LICENSE_KEY ?? '')
@@ -50,9 +61,38 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
   const [editing, setEditing] = useState<Creator | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [rowCount, setRowCount] = useState(() => getRowCount(stage))
+  const [view, setView] = useState<CreatorView>('table')
+  const [filters, setFilters] = useState<FilterState>(emptyFilterState)
+  // Bumped on any mutation so the (synchronous) Kanban view re-reads the store.
+  const [dataVersion, setDataVersion] = useState(0)
+
+  // Translate the filter-bar state into an AG Grid "set" filter model that the
+  // mock backend understands. The free-text search is passed separately.
+  const buildFilterModel = useCallback(
+    (state: FilterState): Record<string, AnyFilter> => {
+      const model: Record<string, AnyFilter> = {}
+      for (const [field, value] of Object.entries(state.selects)) {
+        if (value && value !== ALL_VALUE) {
+          model[field] = { filterType: 'set', values: [value] }
+        }
+      }
+      return model
+    },
+    []
+  )
+
+  const externalFilterModel = useMemo<Record<string, AnyFilter>>(
+    () => buildFilterModel(filters),
+    [buildFilterModel, filters]
+  )
+
+  // Refs so the (memoized) datasource always reads the latest filter values.
+  // They are updated inside event handlers (never during render).
+  const filterModelRef = useRef<Record<string, AnyFilter>>({})
+  const searchRef = useRef('')
 
   // Infinite Row Model datasource: the grid calls getRows for each block and we
-  // resolve it from the mock backend (server-side sort/filter/pagination).
+  // resolve it from the mock backend (server-side sort/filter/search/paging).
   const datasource = useMemo<IDatasource>(
     () => ({
       getRows: (params: IGetRowsParams) => {
@@ -61,7 +101,9 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
           startRow: params.startRow,
           endRow: params.endRow,
           sortModel: params.sortModel,
-          filterModel: params.filterModel,
+          // Merge the toolbar filter bar with any column filters set in the grid.
+          filterModel: { ...filterModelRef.current, ...params.filterModel },
+          search: searchRef.current,
         })
           .then(({ rows, rowCount: total }) => {
             // lastRow lets the grid know the total size so it can stop paging.
@@ -78,7 +120,39 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
   const refreshGrid = useCallback(() => {
     gridApiRef.current?.refreshInfiniteCache()
     setRowCount(getRowCount(stage))
+    setDataVersion((v) => v + 1)
   }, [stage])
+
+  // Rows for the Kanban board: read synchronously from the mock store and
+  // re-computed whenever the stage, filters, or data version change.
+  const kanbanRows = useMemo(
+    () => selectCreators({ stage, search: filters.search, filterModel: externalFilterModel }),
+    // dataVersion intentionally invalidates this memo after mutations.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stage, filters.search, externalFilterModel, dataVersion]
+  )
+
+  const onFiltersChange = useCallback(
+    (next: FilterState) => {
+      setFilters(next)
+      // Update the refs the datasource reads, then re-run the infinite cache
+      // with the new filter/search values.
+      filterModelRef.current = buildFilterModel(next)
+      searchRef.current = next.search
+      gridApiRef.current?.refreshInfiniteCache()
+    },
+    [buildFilterModel]
+  )
+
+  const onStatusChange = useCallback(
+    (id: string, value: string) => {
+      const field = kanbanConfigByStage[stage].field
+      updateCreatorField(stage, id, field, value as Creator[typeof field])
+      setDataVersion((v) => v + 1)
+      gridApiRef.current?.refreshInfiniteCache()
+    },
+    [stage]
+  )
 
   const onGridReady = useCallback((e: GridReadyEvent<Creator>) => {
     gridApiRef.current = e.api
@@ -236,14 +310,28 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
   return (
     <div className='flex flex-1 flex-col gap-3'>
       <CreatorGridToolbar
-        rowCount={rowCount}
+        rowCount={view === 'kanban' ? kanbanRows.length : rowCount}
+        view={view}
+        onViewChange={setView}
         onAdd={addRow}
         onDeleteSelected={deleteSelected}
         onExport={exportCsv}
       />
 
-      <div className='min-h-0 flex-1'>
-        <AgGridReact<Creator>
+      <CreatorFilterBar stage={stage} value={filters} onChange={onFiltersChange} />
+
+      {view === 'kanban' ? (
+        <div className='flex min-h-0 flex-1'>
+          <CreatorKanban
+            stage={stage}
+            rows={kanbanRows}
+            onEditCreator={onEditCreator}
+            onStatusChange={onStatusChange}
+          />
+        </div>
+      ) : (
+        <div className='min-h-0 flex-1'>
+          <AgGridReact<Creator>
           theme={resolvedTheme === 'dark' ? darkTheme : baseTheme}
           rowModelType='infinite'
           datasource={datasource}
@@ -270,7 +358,8 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
           rowHeight={48}
           headerHeight={44}
         />
-      </div>
+        </div>
+      )}
 
       <CreatorEditDialog
         key={`${editing?.id ?? 'empty'}-${dialogOpen ? 'open' : 'closed'}`}

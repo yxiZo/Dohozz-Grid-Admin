@@ -34,7 +34,21 @@ export type FetchParams = {
   sortModel?: SortModelItem[]
   // AG Grid filter model – shape depends on the filter type.
   filterModel?: Record<string, AnyFilter>
+  /** Free-text search matched (OR) across a set of common text fields. */
+  search?: string
 }
+
+/** Fields the global search box matches against. */
+const SEARCH_FIELDS: (keyof Creator)[] = [
+  'tiktokId',
+  'series',
+  'bd',
+  'brand',
+  'email',
+  'contentCategory',
+  'collabCode',
+  'sku',
+]
 
 export type FetchResult = {
   rows: Creator[]
@@ -42,26 +56,26 @@ export type FetchResult = {
   rowCount: number
 }
 
-type TextFilter = {
+export type TextFilter = {
   filterType?: 'text'
   type: string
   filter?: string
 }
-type NumberFilter = {
+export type NumberFilter = {
   filterType?: 'number'
   type: string
   filter?: number
   filterTo?: number
 }
-type SetFilter = {
+export type SetFilter = {
   filterType: 'set'
   values: string[]
 }
-type CombinedFilter = {
+export type CombinedFilter = {
   operator: 'AND' | 'OR'
   conditions: AnyFilter[]
 }
-type AnyFilter = TextFilter | NumberFilter | SetFilter | CombinedFilter
+export type AnyFilter = TextFilter | NumberFilter | SetFilter | CombinedFilter
 
 function matchText(value: unknown, cond: TextFilter): boolean {
   const v = String(value ?? '').toLowerCase()
@@ -145,6 +159,18 @@ function applyFilter(
   )
 }
 
+function applySearch(rows: Creator[], search?: string): Creator[] {
+  const q = search?.trim().toLowerCase()
+  if (!q) return rows
+  return rows.filter((row) =>
+    SEARCH_FIELDS.some((field) =>
+      String((row as Record<string, unknown>)[field] ?? '')
+        .toLowerCase()
+        .includes(q)
+    )
+  )
+}
+
 function applySort(rows: Creator[], sortModel?: SortModelItem[]): Creator[] {
   if (!sortModel || sortModel.length === 0) return rows
   const sorted = [...rows]
@@ -152,12 +178,10 @@ function applySort(rows: Creator[], sortModel?: SortModelItem[]): Creator[] {
     for (const { colId, sort } of sortModel) {
       const av = (a as Record<string, unknown>)[colId]
       const bv = (b as Record<string, unknown>)[colId]
-      let cmp = 0
-      if (typeof av === 'number' && typeof bv === 'number') {
-        cmp = av - bv
-      } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''))
-      }
+      const cmp =
+        typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : String(av ?? '').localeCompare(String(bv ?? ''))
       if (cmp !== 0) return sort === 'asc' ? cmp : -cmp
     }
     return 0
@@ -175,11 +199,13 @@ export function fetchCreators({
   endRow,
   sortModel,
   filterModel,
+  search,
 }: FetchParams): Promise<FetchResult> {
   return new Promise((resolve) => {
     const latency = 300 + Math.random() * 500
     setTimeout(() => {
-      const filtered = applyFilter(db[stage], filterModel)
+      const searched = applySearch(db[stage], search)
+      const filtered = applyFilter(searched, filterModel)
       const ordered = applySort(filtered, sortModel)
       const rows = ordered.slice(startRow, endRow).map((r) => ({ ...r }))
       // eslint-disable-next-line no-console
@@ -189,6 +215,42 @@ export function fetchCreators({
       resolve({ rows, rowCount: ordered.length })
     }, latency)
   })
+}
+
+export type SelectParams = {
+  stage: CreatorStage
+  search?: string
+  filterModel?: Record<string, AnyFilter>
+}
+
+/**
+ * Synchronous read of the (search + filter) matched rows for a stage.
+ * Used by the Kanban board, which groups every matching row by status
+ * rather than paging – so it reads the in-memory store directly.
+ */
+export function selectCreators({
+  stage,
+  search,
+  filterModel,
+}: SelectParams): Creator[] {
+  const searched = applySearch(db[stage], search)
+  return applyFilter(searched, filterModel).map((r) => ({ ...r }))
+}
+
+/** Update a single field (e.g. Kanban status) on a creator. */
+export function updateCreatorField(
+  stage: CreatorStage,
+  id: string,
+  field: keyof Creator,
+  value: Creator[keyof Creator]
+): void {
+  const row = db[stage].find((r) => r.id === id)
+  if (!row) return
+  ;(row as Record<string, unknown>)[field as string] = value
+  // eslint-disable-next-line no-console
+  console.log(
+    `[v0] mock API PATCH /creators/${id} { ${String(field)}: ${String(value)} }`
+  )
 }
 
 /** Total (unfiltered) rows currently in the store for a stage. */
