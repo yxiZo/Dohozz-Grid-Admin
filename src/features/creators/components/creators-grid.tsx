@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -17,6 +10,8 @@ import {
   type GetContextMenuItemsParams,
   type GridApi,
   type GridReadyEvent,
+  type IDatasource,
+  type IGetRowsParams,
   type MenuItemDef,
 } from 'ag-grid-community'
 import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise'
@@ -27,10 +22,32 @@ import {
   type CreatorStage,
   createBlankCreator,
 } from '../data/data'
+import {
+  PAGE_SIZE,
+  type AnyFilter,
+  deleteCreators,
+  fetchCreators,
+  getRowCount,
+  updateCreatorField,
+  upsertCreator,
+} from '../data/mock-server'
 import { columnsByStage } from '../grid/columns'
+import {
+  ALL_VALUE,
+  emptyFilterState,
+  type FilterState,
+  kanbanConfigByStage,
+} from '../grid/view-config'
+import { useReviewPermission } from '../hooks/use-review-permission'
 import { type CreatorGridContext } from './creator-cell'
 import { CreatorEditDialog } from './creator-edit-dialog'
-import { CreatorGridToolbar } from './creator-grid-toolbar'
+import { CreatorFilterBar } from './creator-filter-bar'
+import { CreatorGridToolbar, type CreatorView } from './creator-grid-toolbar'
+import { CreatorKanban } from './creator-kanban'
+import {
+  CreatorReviewDialog,
+  type ReviewDecision,
+} from './creator-review-dialog'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
 LicenseManager.setLicenseKey(import.meta.env.VITE_AG_GRID_LICENSE_KEY ?? '')
@@ -40,15 +57,100 @@ const darkTheme = themeQuartz.withPart(colorSchemeDark)
 
 type CreatorsGridProps = {
   stage: CreatorStage
-  rows: Creator[]
-  setRows: Dispatch<SetStateAction<Creator[]>>
 }
 
-export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
+export function CreatorsGrid({ stage }: CreatorsGridProps) {
   const { resolvedTheme } = useTheme()
+  const { canReview } = useReviewPermission()
   const gridApiRef = useRef<GridApi<Creator> | null>(null)
   const [editing, setEditing] = useState<Creator | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [reviewing, setReviewing] = useState<Creator | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [rowCount, setRowCount] = useState(() => getRowCount(stage))
+  const [view, setView] = useState<CreatorView>('table')
+  const [filters, setFilters] = useState<FilterState>(emptyFilterState)
+  // Bumped on any mutation so the (synchronous) Kanban view re-reads the store.
+  const [dataVersion, setDataVersion] = useState(0)
+
+  // Translate the filter-bar state into an AG Grid "set" filter model that the
+  // mock backend understands. The free-text search is passed separately.
+  const buildFilterModel = useCallback(
+    (state: FilterState): Record<string, AnyFilter> => {
+      const model: Record<string, AnyFilter> = {}
+      for (const [field, value] of Object.entries(state.selects)) {
+        if (value && value !== ALL_VALUE) {
+          model[field] = { filterType: 'set', values: [value] }
+        }
+      }
+      return model
+    },
+    []
+  )
+
+  const externalFilterModel = useMemo<Record<string, AnyFilter>>(
+    () => buildFilterModel(filters),
+    [buildFilterModel, filters]
+  )
+
+  // Refs so the (memoized) datasource always reads the latest filter values.
+  // They are updated inside event handlers (never during render).
+  const filterModelRef = useRef<Record<string, AnyFilter>>({})
+  const searchRef = useRef('')
+
+  // Infinite Row Model datasource: the grid calls getRows for each block and we
+  // resolve it from the mock backend (server-side sort/filter/search/paging).
+  const datasource = useMemo<IDatasource>(
+    () => ({
+      getRows: (params: IGetRowsParams) => {
+        fetchCreators({
+          stage,
+          startRow: params.startRow,
+          endRow: params.endRow,
+          sortModel: params.sortModel,
+          // Merge the toolbar filter bar with any column filters set in the grid.
+          filterModel: { ...filterModelRef.current, ...params.filterModel },
+          search: searchRef.current,
+        })
+          .then(({ rows, rowCount: total }) => {
+            // lastRow lets the grid know the total size so it can stop paging.
+            const lastRow = params.endRow >= total ? total : undefined
+            params.successCallback(rows, lastRow)
+            setRowCount(total)
+          })
+          .catch(() => params.failCallback())
+      },
+    }),
+    [stage]
+  )
+
+  const refreshGrid = useCallback(() => {
+    gridApiRef.current?.refreshInfiniteCache()
+    setRowCount(getRowCount(stage))
+    setDataVersion((v) => v + 1)
+  }, [stage])
+
+  const onFiltersChange = useCallback(
+    (next: FilterState) => {
+      setFilters(next)
+      // Update the refs the datasource reads, then re-run the infinite cache
+      // with the new filter/search values.
+      filterModelRef.current = buildFilterModel(next)
+      searchRef.current = next.search
+      gridApiRef.current?.refreshInfiniteCache()
+    },
+    [buildFilterModel]
+  )
+
+  const onStatusChange = useCallback(
+    (id: string, value: string) => {
+      const field = kanbanConfigByStage[stage].field
+      updateCreatorField(stage, id, field, value as Creator[typeof field])
+      setDataVersion((v) => v + 1)
+      gridApiRef.current?.refreshInfiniteCache()
+    },
+    [stage]
+  )
 
   const onGridReady = useCallback((e: GridReadyEvent<Creator>) => {
     gridApiRef.current = e.api
@@ -63,20 +165,43 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
     onEditCreator(createBlankCreator(stage))
   }, [onEditCreator, stage])
 
+  const onReviewCreator = useCallback(
+    (creator: Creator) => {
+      if (!canReview) return
+      setReviewing({ ...creator })
+      setReviewOpen(true)
+    },
+    [canReview]
+  )
+
   const gridContext = useMemo<CreatorGridContext>(
-    () => ({ onEditCreator }),
-    [onEditCreator]
+    () => ({
+      onEditCreator,
+      // Review is only available on the outreach stage and for permitted users.
+      onReviewCreator: stage === 'outreach' ? onReviewCreator : undefined,
+      canReview: stage === 'outreach' && canReview,
+    }),
+    [onEditCreator, onReviewCreator, canReview, stage]
   )
 
   const saveCreator = useCallback(
     (updated: Creator) => {
-      setRows((prev) => {
-        const exists = prev.some((row) => row.id === updated.id)
-        if (!exists) return [{ ...updated }, ...prev]
-        return prev.map((row) => (row.id === updated.id ? { ...updated } : row))
-      })
+      upsertCreator(stage, updated)
+      refreshGrid()
     },
-    [setRows]
+    [refreshGrid, stage]
+  )
+
+  const saveReview = useCallback(
+    (creator: Creator, decision: ReviewDecision) => {
+      upsertCreator(stage, {
+        ...creator,
+        review: decision.review,
+        notApprovalReason: decision.notApprovalReason,
+      })
+      refreshGrid()
+    },
+    [refreshGrid, stage]
   )
 
   const columnDefs = useMemo<ColDef<Creator>[]>(
@@ -95,32 +220,11 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
     []
   )
 
-  const autoGroupColumnDef = useMemo<ColDef<Creator>>(
-    () => ({
-      headerName: '分组',
-      minWidth: 220,
-      cellRendererParams: { suppressCount: false },
-    }),
-    []
-  )
-
-  const sideBar = useMemo(
-    () => ({ toolPanels: ['columns', 'filters'], defaultToolPanel: '' }),
-    []
-  )
-
   const statusBar = useMemo(
     () => ({
       statusPanels: [
-        { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
+        { statusPanel: 'agTotalRowCountComponent', align: 'left' },
         { statusPanel: 'agSelectedRowCountComponent', align: 'center' },
-        {
-          statusPanel: 'agAggregationComponent',
-          align: 'right',
-          statusPanelParams: {
-            aggFuncs: ['count', 'sum', 'avg', 'min', 'max'],
-          },
-        },
       ],
     }),
     []
@@ -133,12 +237,10 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
 
   const onCellValueChanged = useCallback(
     (e: CellValueChangedEvent<Creator>) => {
-      const updated = e.data
-      setRows((prev) =>
-        prev.map((row) => (row.id === updated.id ? { ...updated } : row))
-      )
+      // Persist inline edits back to the mock backend.
+      if (e.data) upsertCreator(stage, e.data)
     },
-    [setRows]
+    [stage]
   )
 
   const getRangeRowIds = useCallback((): string[] => {
@@ -173,11 +275,11 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
   const deleteRowsByIds = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return
-      const idSet = new Set(ids)
-      setRows((prev) => prev.filter((row) => !idSet.has(row.id)))
+      deleteCreators(stage, ids)
       gridApiRef.current?.deselectAll()
+      refreshGrid()
     },
-    [setRows]
+    [refreshGrid, stage]
   )
 
   const deleteSelected = useCallback(() => {
@@ -197,7 +299,22 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
       const idsToDelete =
         selectedIds.length > 0 ? selectedIds : clickedId ? [clickedId] : []
 
+      const reviewItems: (DefaultMenuItem | MenuItemDef)[] =
+        stage === 'outreach' && canReview
+          ? [
+              {
+                name: '提报审核',
+                disabled: !params.node?.data,
+                action: () => {
+                  if (params.node?.data) onReviewCreator(params.node.data)
+                },
+              },
+              'separator',
+            ]
+          : []
+
       return [
+        ...reviewItems,
         {
           name: '编辑达人信息',
           disabled: !params.node?.data,
@@ -226,47 +343,72 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
         'export',
       ]
     },
-    [addRow, deleteRowsByIds, getSelectedRowIds, onEditCreator]
+    [
+      addRow,
+      deleteRowsByIds,
+      getSelectedRowIds,
+      onEditCreator,
+      onReviewCreator,
+      canReview,
+      stage,
+    ]
   )
 
   return (
-    <div className='flex flex-1 flex-col gap-3'>
+    <div className='flex min-h-0 flex-1 flex-col gap-3'>
       <CreatorGridToolbar
-        rowCount={rows.length}
+        rowCount={rowCount}
+        view={view}
+        onViewChange={setView}
         onAdd={addRow}
         onDeleteSelected={deleteSelected}
         onExport={exportCsv}
       />
 
-      <div className='min-h-0 flex-1'>
-        <AgGridReact<Creator>
+      <CreatorFilterBar stage={stage} value={filters} onChange={onFiltersChange} />
+
+      {view === 'kanban' ? (
+        <div className='flex min-h-0 flex-1'>
+          <CreatorKanban
+            stage={stage}
+            search={filters.search}
+            filterModel={externalFilterModel}
+            refreshKey={dataVersion}
+            onEditCreator={onEditCreator}
+            onStatusChange={onStatusChange}
+          />
+        </div>
+      ) : (
+        <div className='min-h-0 flex-1'>
+          <AgGridReact<Creator>
           theme={resolvedTheme === 'dark' ? darkTheme : baseTheme}
-          rowData={rows}
+          rowModelType='infinite'
+          datasource={datasource}
+          cacheBlockSize={PAGE_SIZE}
+          cacheOverflowSize={2}
+          maxConcurrentDatasourceRequests={1}
+          infiniteInitialRowCount={PAGE_SIZE}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
-          autoGroupColumnDef={autoGroupColumnDef}
           context={gridContext}
           getRowId={getRowId}
           onGridReady={onGridReady}
           onCellValueChanged={onCellValueChanged}
           cellSelection={{ handle: { mode: 'range' } }}
           getContextMenuItems={getContextMenuItems}
-          sideBar={sideBar}
           statusBar={statusBar}
           rowSelection={{
             mode: 'multiRow',
             enableClickSelection: true,
             enableSelectionWithoutKeys: true,
           }}
-          rowGroupPanelShow='always'
-          enableCharts
-          groupDefaultExpanded={1}
           stopEditingWhenCellsLoseFocus
           animateRows
           rowHeight={48}
           headerHeight={44}
         />
-      </div>
+        </div>
+      )}
 
       <CreatorEditDialog
         key={`${editing?.id ?? 'empty'}-${dialogOpen ? 'open' : 'closed'}`}
@@ -275,6 +417,14 @@ export function CreatorsGrid({ stage, rows, setRows }: CreatorsGridProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSave={saveCreator}
+      />
+
+      <CreatorReviewDialog
+        key={`${reviewing?.id ?? 'empty'}-${reviewOpen ? 'open' : 'closed'}`}
+        creator={reviewing}
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        onConfirm={saveReview}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import { type ICellRendererParams } from 'ag-grid-community'
-import { Users, Mail, TrendingUp, Pencil } from 'lucide-react'
+import { Users, Mail, TrendingUp, Pencil, Gavel, Lock } from 'lucide-react'
 import { PlatformLogo, type Platform } from '@/assets/brand-icons'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -8,10 +8,19 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-import { type Creator } from '../data/data'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { type Creator, reviewColorMap } from '../data/data'
 
 export type CreatorGridContext = {
   onEditCreator: (creator: Creator) => void
+  /** Opens the 提报审核 dialog. Only wired on the outreach stage. */
+  onReviewCreator?: (creator: Creator) => void
+  /** Whether the current user may perform 审核 (仅限特定人员). */
+  canReview?: boolean
 }
 
 function initials(handle: string) {
@@ -46,6 +55,53 @@ function InfoRow({
       ) : null}
       <span className='text-muted-foreground w-20 shrink-0'>{label}</span>
       <span className='truncate'>{value}</span>
+    </div>
+  )
+}
+
+/**
+ * 审核 column cell for the outreach stage.
+ * - Shows the current review status (colored dot + label).
+ * - Reviewers see an "审核" button that opens the review dialog.
+ * - Non-reviewers see a lock icon; inline editing is disabled entirely,
+ *   so the status can only be changed through the gated dialog.
+ */
+export function ReviewActionRenderer(params: ICellRendererParams<Creator>) {
+  const creator = params.data
+  const context = params.context as CreatorGridContext
+  const status = (params.value as string) || '待审核'
+  const color = reviewColorMap[status] ?? 'var(--muted-foreground)'
+
+  return (
+    <div className='flex h-full w-full items-center justify-between gap-2'>
+      <span className='inline-flex items-center gap-2'>
+        <span
+          className='inline-block size-2 rounded-full'
+          style={{ backgroundColor: color }}
+        />
+        {status}
+      </span>
+
+      {context.canReview ? (
+        <button
+          type='button'
+          onClick={() => creator && context.onReviewCreator?.(creator)}
+          className='text-primary hover:bg-primary/10 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors'
+        >
+          <Gavel className='size-3.5' />
+          审核
+        </button>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className='text-muted-foreground inline-flex items-center'>
+              <Lock className='size-3.5' />
+              <span className='sr-only'>仅审核人员可操作</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>仅审核人员可操作</TooltipContent>
+        </Tooltip>
+      )}
     </div>
   )
 }

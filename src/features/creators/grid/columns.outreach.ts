@@ -1,15 +1,14 @@
 import { type ColDef } from 'ag-grid-community'
 import {
   BadgeRenderer,
-  ReviewRenderer,
   WorkingStatusRenderer,
 } from '../components/cell-editors'
+import { ReviewActionRenderer } from '../components/creator-cell'
 import {
   collabTypeOptions,
   contentCategoryOptions,
   contentTypeOptions,
   followerTierOptions,
-  reviewOptions,
   workingStatusOptions,
   type Creator,
 } from '../data/data'
@@ -31,10 +30,12 @@ export const outreachColumns: ColDef<Creator>[] = [
   {
     field: 'review',
     headerName: '审核',
-    width: 120,
+    width: 150,
     enableRowGroup: true,
-    cellRenderer: ReviewRenderer,
-    ...comboColumn(reviewOptions, 'review'),
+    // Locked from inline editing — status can only change via the gated
+    // 提报审核 dialog (仅限特定人员操作).
+    editable: false,
+    cellRenderer: ReviewActionRenderer,
   },
   {
     field: 'notApprovalReason',

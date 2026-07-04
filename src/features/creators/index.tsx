@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useLanguage, type TranslationKey } from '@/context/language-provider'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { LanguageSwitch } from '@/components/language-switch'
@@ -8,12 +7,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { CreatorsGrid } from './components/creators-grid'
-import {
-  type Creator,
-  type CreatorStage,
-  creatorsByStage,
-  stageConfig,
-} from './data/data'
+import { type CreatorStage, stageConfig } from './data/data'
 
 type CreatorsProps = {
   stage: CreatorStage
@@ -21,7 +15,6 @@ type CreatorsProps = {
 
 export function Creators({ stage }: CreatorsProps) {
   const { t } = useLanguage()
-  const [rows, setRows] = useState<Creator[]>(() => creatorsByStage[stage])
   const config = stageConfig[stage]
 
   return (
@@ -45,7 +38,7 @@ export function Creators({ stage }: CreatorsProps) {
             </p>
           </div>
         </div>
-        <CreatorsGrid stage={stage} rows={rows} setRows={setRows} />
+        <CreatorsGrid stage={stage} />
       </Main>
     </>
   )
