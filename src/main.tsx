@@ -20,7 +20,12 @@ import { routeTree } from './routeTree.gen'
 import './styles/index.css'
 
 async function enableMocking() {
-  if (import.meta.env.VITE_MOCK_ENABLED !== 'true') return
+  // 开发环境默认启用 MSW mock（除非显式设置 VITE_MOCK_ENABLED=false）；
+  // 生产环境仅在显式设置 VITE_MOCK_ENABLED=true 时启用。
+  const mockEnabled =
+    import.meta.env.VITE_MOCK_ENABLED === 'true' ||
+    (import.meta.env.DEV && import.meta.env.VITE_MOCK_ENABLED !== 'false')
+  if (!mockEnabled) return
 
   const { worker } = await import('./mocks/browser')
 

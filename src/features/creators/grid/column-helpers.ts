@@ -21,6 +21,43 @@ export const baseCreatorColumn: ColDef<Creator> = {
   cellRenderer: CreatorCellRenderer,
 }
 
+// 团队 / 国家的展示映射（与 teams mock 数据保持一致）。
+const TEAM_NAME_BY_ID: Record<number, string> = {
+  1: 'Team A',
+  2: 'Team B',
+  3: '外部中台团队',
+}
+
+const COUNTRY_NAME_BY_ID: Record<number, string> = {
+  1: '马来西亚',
+  2: '印度尼西亚',
+  3: '泰国',
+  4: '新加坡',
+  5: '越南',
+  6: '菲律宾',
+  7: '美国',
+}
+
+export const teamColumn: ColDef<Creator> = {
+  field: 'teamId',
+  headerName: '所属团队',
+  width: 140,
+  enableRowGroup: true,
+  editable: false,
+  valueFormatter: (params: ValueFormatterParams<Creator, number>) =>
+    params.value == null ? '—' : (TEAM_NAME_BY_ID[params.value] ?? '—'),
+}
+
+export const countryColumn: ColDef<Creator> = {
+  field: 'countryId',
+  headerName: '所属国家',
+  width: 130,
+  enableRowGroup: true,
+  editable: false,
+  valueFormatter: (params: ValueFormatterParams<Creator, number>) =>
+    params.value == null ? '—' : (COUNTRY_NAME_BY_ID[params.value] ?? '—'),
+}
+
 export const usdFormatter = (params: ValueFormatterParams<Creator, number>) => {
   if (params.value == null || Number.isNaN(params.value)) return ''
   return `$${Number(params.value).toLocaleString('en-US')}`
