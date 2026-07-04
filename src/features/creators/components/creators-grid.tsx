@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -57,13 +57,16 @@ const darkTheme = themeQuartz.withPart(colorSchemeDark)
 
 type CreatorsGridProps = {
   stage: CreatorStage
+  /** Reports whether the table/kanban body has been scrolled away from the top. */
+  onScrolledChange?: (scrolled: boolean) => void
 }
 
-export function CreatorsGrid({ stage }: CreatorsGridProps) {
+export function CreatorsGrid({ stage, onScrolledChange }: CreatorsGridProps) {
   const { resolvedTheme } = useTheme()
   const { canReview } = useReviewPermission()
   const gridApiRef = useRef<GridApi<Creator> | null>(null)
   const [editing, setEditing] = useState<Creator | null>(null)
+  const [isNew, setIsNew] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [reviewing, setReviewing] = useState<Creator | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -72,6 +75,25 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
   const [filters, setFilters] = useState<FilterState>(emptyFilterState)
   // Bumped on any mutation so the (synchronous) Kanban view re-reads the store.
   const [dataVersion, setDataVersion] = useState(0)
+
+  // Notify the parent when the body is scrolled so it can collapse the heading.
+  const scrolledRef = useRef(false)
+  const reportScroll = useCallback(
+    (top: number) => {
+      const next = top > 8
+      if (next !== scrolledRef.current) {
+        scrolledRef.current = next
+        onScrolledChange?.(next)
+      }
+    },
+    [onScrolledChange]
+  )
+
+  // Reset the collapsed heading whenever the view switches (table <-> kanban).
+  useEffect(() => {
+    scrolledRef.current = false
+    onScrolledChange?.(false)
+  }, [view, onScrolledChange])
 
   // Translate the filter-bar state into an AG Grid "set" filter model that the
   // mock backend understands. The free-text search is passed separately.
@@ -156,14 +178,20 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
     gridApiRef.current = e.api
   }, [])
 
-  const onEditCreator = useCallback((creator: Creator) => {
+  const openEditor = useCallback((creator: Creator, asNew: boolean) => {
     setEditing({ ...creator })
+    setIsNew(asNew)
     setDialogOpen(true)
   }, [])
 
+  const onEditCreator = useCallback(
+    (creator: Creator) => openEditor(creator, false),
+    [openEditor]
+  )
+
   const addRow = useCallback(() => {
-    onEditCreator(createBlankCreator(stage))
-  }, [onEditCreator, stage])
+    openEditor(createBlankCreator(stage), true)
+  }, [openEditor, stage])
 
   const onReviewCreator = useCallback(
     (creator: Creator) => {
@@ -368,7 +396,12 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
       <CreatorFilterBar stage={stage} value={filters} onChange={onFiltersChange} />
 
       {view === 'kanban' ? (
-        <div className='flex min-h-0 flex-1'>
+        <div
+          className='flex min-h-0 flex-1'
+          onScrollCapture={(e) =>
+            reportScroll((e.target as HTMLElement).scrollTop)
+          }
+        >
           <CreatorKanban
             stage={stage}
             search={filters.search}
@@ -393,6 +426,7 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
           context={gridContext}
           getRowId={getRowId}
           onGridReady={onGridReady}
+          onBodyScroll={(e) => reportScroll(e.top)}
           onCellValueChanged={onCellValueChanged}
           cellSelection={{ handle: { mode: 'range' } }}
           getContextMenuItems={getContextMenuItems}
@@ -414,6 +448,7 @@ export function CreatorsGrid({ stage }: CreatorsGridProps) {
         key={`${editing?.id ?? 'empty'}-${dialogOpen ? 'open' : 'closed'}`}
         stage={stage}
         creator={editing}
+        isNew={isNew}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSave={saveCreator}

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { getTeams } from '@/services/teams'
 import {
   CountrySelect,
@@ -8,6 +10,11 @@ import {
 } from '@/features/teams/components/team-country-select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -51,6 +58,8 @@ import {
 type CreatorEditDialogProps = {
   stage: CreatorStage
   creator: Creator | null
+  /** When true the dialog is creating a brand-new record (quick add). */
+  isNew?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (creator: Creator) => void
@@ -75,14 +84,19 @@ function cloneCreator(creator: Creator | null) {
 
 function FormField({
   label,
+  required,
   children,
 }: {
   label: string
+  required?: boolean
   children: React.ReactNode
 }) {
   return (
     <div className='flex flex-col gap-1.5'>
-      <Label className='text-xs text-muted-foreground'>{label}</Label>
+      <Label className='text-xs text-muted-foreground'>
+        {label}
+        {required && <span className='ms-0.5 text-destructive'>*</span>}
+      </Label>
       {children}
     </div>
   )
@@ -99,6 +113,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export function CreatorEditDialog({
   stage,
   creator,
+  isNew = false,
   open,
   onOpenChange,
   onSave,
@@ -106,6 +121,8 @@ export function CreatorEditDialog({
   const [draft, setDraft] = useState<Creator | null>(() =>
     cloneCreator(creator)
   )
+  // In quick-add mode the optional fields start collapsed.
+  const [showMore, setShowMore] = useState(!isNew)
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teams'],
@@ -202,10 +219,10 @@ export function CreatorEditDialog({
     onOpenChange(false)
   }
 
-  const renderIdentitySection = () => (
+  const renderCoreSection = () => (
     <>
       <SectionTitle>基础信息</SectionTitle>
-      <FormField label='所属团队'>
+      <FormField label='所属团队' required>
         <TeamSelect
           teams={teams}
           value={draft.teamId}
@@ -216,7 +233,7 @@ export function CreatorEditDialog({
           }
         />
       </FormField>
-      <FormField label='所属国家'>
+      <FormField label='所属国家' required>
         <CountrySelect
           team={selectedTeam}
           value={draft.countryId}
@@ -224,6 +241,11 @@ export function CreatorEditDialog({
         />
       </FormField>
       {renderTextField('tiktokId', 'Tiktok ID')}
+    </>
+  )
+
+  const renderRestIdentity = () => (
+    <>
       {renderTextField('series', 'Series')}
       {renderTextField('profile', 'Profile', 'url')}
       {renderSelectField('bd', 'BD', bdOptions)}
@@ -374,18 +396,47 @@ export function CreatorEditDialog({
             <div>
               <DialogTitle>{draft.tiktokId || '新达人'}</DialogTitle>
               <DialogDescription>
-                编辑当前阶段信息，保存后即时生效
+                {isNew
+                  ? '只需填写带 * 的必填项即可创建，其余信息可稍后在表格中补充'
+                  : '编辑当前阶段信息，保存后即时生效'}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <ScrollArea className='max-h-[60vh]'>
-          <div className='grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3'>
-            {renderIdentitySection()}
-            {stage === 'outreach' && renderOutreachSection()}
-            {stage === 'samples' && renderSampleSection()}
-            {stage === 'videos' && renderVideoSection()}
+          <div className='flex flex-col gap-4 p-6'>
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+              {renderCoreSection()}
+            </div>
+
+            <Collapsible open={showMore} onOpenChange={setShowMore}>
+              {isNew && (
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className='w-full justify-between'
+                  >
+                    <span>补充信息（选填，可稍后补充）</span>
+                    <ChevronDown
+                      className={cn(
+                        'size-4 transition-transform',
+                        showMore && 'rotate-180'
+                      )}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+              )}
+              <CollapsibleContent className={cn(isNew && 'pt-4')}>
+                <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+                  {renderRestIdentity()}
+                  {stage === 'outreach' && renderOutreachSection()}
+                  {stage === 'samples' && renderSampleSection()}
+                  {stage === 'videos' && renderVideoSection()}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </ScrollArea>
 
