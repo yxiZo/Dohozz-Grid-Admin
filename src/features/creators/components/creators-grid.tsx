@@ -391,9 +391,14 @@ export function CreatorsGrid({ stage, onScrolledChange }: CreatorsGridProps) {
         onAdd={addRow}
         onDeleteSelected={deleteSelected}
         onExport={exportCsv}
+        filterSlot={
+          <CreatorFilterBar
+            stage={stage}
+            value={filters}
+            onChange={onFiltersChange}
+          />
+        }
       />
-
-      <CreatorFilterBar stage={stage} value={filters} onChange={onFiltersChange} />
 
       {view === 'kanban' ? (
         <div

@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import { Download, KanbanSquare, Plus, Table2, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/context/language-provider'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,8 @@ export type CreatorGridToolbarProps = {
   onAdd: () => void
   onDeleteSelected: () => void
   onExport: () => void
+  /** Compact filter control rendered inline in the toolbar. */
+  filterSlot?: ReactNode
 }
 
 export function CreatorGridToolbar({
@@ -21,6 +24,7 @@ export function CreatorGridToolbar({
   onAdd,
   onDeleteSelected,
   onExport,
+  filterSlot,
 }: CreatorGridToolbarProps) {
   const { t } = useLanguage()
 
@@ -41,6 +45,8 @@ export function CreatorGridToolbar({
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {filterSlot}
 
       <Button size='sm' onClick={onAdd}>
         <Plus data-icon='inline-start' />
