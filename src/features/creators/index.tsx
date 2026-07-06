@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import { useLanguage, type TranslationKey } from '@/context/language-provider'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { LanguageSwitch } from '@/components/language-switch'
@@ -16,6 +18,9 @@ type CreatorsProps = {
 export function Creators({ stage }: CreatorsProps) {
   const { t } = useLanguage()
   const config = stageConfig[stage]
+  // Collapse the page heading once the user starts scrolling the table/kanban,
+  // so the data itself gets the maximum amount of vertical space.
+  const [scrolled, setScrolled] = useState(false)
 
   return (
     <>
@@ -27,9 +32,15 @@ export function Creators({ stage }: CreatorsProps) {
         <ProfileDropdown />
       </Header>
 
-      <Main fixed fluid className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-end justify-between gap-2'>
-          <div>
+      <Main fixed fluid className='flex flex-1 flex-col gap-3 sm:gap-4'>
+        <div
+          aria-hidden={scrolled}
+          className={cn(
+            'grid shrink-0 transition-[grid-template-rows,opacity] duration-200 ease-out',
+            scrolled ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+          )}
+        >
+          <div className='overflow-hidden'>
             <h2 className='text-2xl font-bold tracking-tight'>
               {t(config.titleKey as TranslationKey)}
             </h2>
@@ -38,7 +49,7 @@ export function Creators({ stage }: CreatorsProps) {
             </p>
           </div>
         </div>
-        <CreatorsGrid stage={stage} />
+        <CreatorsGrid stage={stage} onScrolledChange={setScrolled} />
       </Main>
     </>
   )
