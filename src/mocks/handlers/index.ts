@@ -1,5 +1,6 @@
 import { influencerHandlers } from './influencers'
 import { permissionHandlers } from './permissions'
+import { productHandlers } from './products'
 import { roleHandlers } from './roles'
 import { taskHandlers } from './tasks'
 import { teamHandlers } from './teams'
@@ -12,5 +13,6 @@ export const handlers = [
   ...permissionHandlers,
   ...teamHandlers,
   ...influencerHandlers,
+  ...productHandlers,
 ]
 

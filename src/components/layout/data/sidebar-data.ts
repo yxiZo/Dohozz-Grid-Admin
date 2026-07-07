@@ -10,6 +10,7 @@ import {
   Shield,
   KeyRound,
   Contact,
+  Package,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -69,6 +70,16 @@ export const sidebarData: SidebarData = {
           title: '视频验收',
           url: '/creators/videos',
           icon: Clapperboard,
+        },
+      ],
+    },
+    {
+      title: '产品管理',
+      items: [
+        {
+          title: '产品管理',
+          url: '/products',
+          icon: Package,
         },
       ],
     },
