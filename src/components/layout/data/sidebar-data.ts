@@ -9,6 +9,8 @@ import {
   Users,
   Shield,
   KeyRound,
+  Contact,
+  Package,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -50,6 +52,11 @@ export const sidebarData: SidebarData = {
       title: '达人运营',
       items: [
         {
+          title: '达人管理',
+          url: '/influencers',
+          icon: Contact,
+        },
+        {
           title: '建联提报',
           url: '/creators/outreach',
           icon: UserPlus,
@@ -63,6 +70,16 @@ export const sidebarData: SidebarData = {
           title: '视频验收',
           url: '/creators/videos',
           icon: Clapperboard,
+        },
+      ],
+    },
+    {
+      title: '产品管理',
+      items: [
+        {
+          title: '产品管理',
+          url: '/products',
+          icon: Package,
         },
       ],
     },
