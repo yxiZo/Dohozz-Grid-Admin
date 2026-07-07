@@ -1,3 +1,4 @@
+import { influencerHandlers } from './influencers'
 import { permissionHandlers } from './permissions'
 import { roleHandlers } from './roles'
 import { taskHandlers } from './tasks'
@@ -10,5 +11,6 @@ export const handlers = [
   ...roleHandlers,
   ...permissionHandlers,
   ...teamHandlers,
+  ...influencerHandlers,
 ]
 
